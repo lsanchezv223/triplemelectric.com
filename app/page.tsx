@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Factory, Home, Mail, MapPin, MessageCircle, PhoneCall } from "lucide-react";
 import { PortfolioTabs } from "@/components/portfolio-tabs";
 import { Reveal } from "@/components/reveal";
+import { ContactForm } from "@/components/contact-form";
 import { contactInfo } from "@/lib/site-data";
 
 const serviceColumns = [
@@ -140,14 +141,6 @@ export default function HomePage() {
               </Reveal>
             );
           })}
-        </div>
-        <div className="mt-8">
-          <Link
-            href="/services/electrical-upgrades"
-            className="inline-flex items-center gap-2 rounded-full border border-sand/35 px-5 py-2.5 text-sm font-semibold text-sand transition hover:border-sand/70"
-          >
-            Explore Service Pages <ArrowRight size={16} />
-          </Link>
         </div>
       </section>
 
@@ -438,35 +431,7 @@ export default function HomePage() {
           </Reveal>
 
           <Reveal delay={0.12}>
-            <form className="rounded-3xl border border-white/20 bg-white/[0.08] p-6 shadow-glow backdrop-blur md:p-8">
-              <h3 className="font-[var(--font-display)] text-2xl font-bold text-sand">Get In Touch</h3>
-              <div className="mt-6 space-y-4">
-                <input
-                  className="w-full rounded-2xl border border-white/20 bg-[#ffffff12] px-4 py-3 text-sm text-sand placeholder:text-sand/50 outline-none transition focus:border-slateBlue"
-                  placeholder="Full Name"
-                />
-                <input
-                  type="email"
-                  className="w-full rounded-2xl border border-white/20 bg-[#ffffff12] px-4 py-3 text-sm text-sand placeholder:text-sand/50 outline-none transition focus:border-slateBlue"
-                  placeholder="Email Address"
-                />
-                <input
-                  className="w-full rounded-2xl border border-white/20 bg-[#ffffff12] px-4 py-3 text-sm text-sand placeholder:text-sand/50 outline-none transition focus:border-slateBlue"
-                  placeholder="Phone Number"
-                />
-                <textarea
-                  rows={5}
-                  className="w-full rounded-2xl border border-white/20 bg-[#ffffff12] px-4 py-3 text-sm text-sand placeholder:text-sand/50 outline-none transition focus:border-slateBlue"
-                  placeholder="Your Message"
-                />
-                <button
-                  type="button"
-                  className="w-full rounded-2xl bg-[#ff2a5f] px-4 py-3 text-sm font-bold uppercase tracking-[0.04em] text-white transition hover:brightness-110"
-                >
-                  Send Message
-                </button>
-              </div>
-            </form>
+            <ContactForm />
           </Reveal>
         </div>
       </section>

@@ -38,6 +38,26 @@ pm2 save
 
 PM2 app name: `triplemelectric-web`
 
+## 5) Contact form email (SMTP)
+
+Create a `.env.local` with:
+
+```bash
+SMTP_HOST=smtp.your-provider.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-user
+SMTP_PASS=your-smtp-password
+CONTACT_TO_EMAIL=info@triplemelectric.ca
+CONTACT_FROM_EMAIL=info@triplemelectric.ca
+```
+
+Notes:
+
+- `CONTACT_TO_EMAIL` is the recipient inbox.
+- `CONTACT_FROM_EMAIL` is the sender shown in the message.
+- If `CONTACT_TO_EMAIL` is omitted, it defaults to `info@triplemelectric.ca`.
+
 ## Current sections included
 
 - Hero

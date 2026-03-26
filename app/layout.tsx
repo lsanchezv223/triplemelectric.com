@@ -3,6 +3,7 @@ import "./globals.css";
 import { LogoIntro } from "@/components/logo-intro";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { StickyContactCta } from "@/components/sticky-contact-cta";
 import { SmoothScroll } from "@/components/smooth-scroll";
 
 export const metadata: Metadata = {
@@ -10,6 +11,11 @@ export const metadata: Metadata = {
   title: "Triple M Electric | Licensed Electricians in Toronto & GTA",
   description:
     "Residential, commercial, and industrial electrical services across Toronto and the GTA by certified, licensed electricians.",
+  icons: {
+    icon: "/1-846635ab.ico",
+    shortcut: "/1-846635ab.ico",
+    apple: "/1-846635ab.ico"
+  },
   openGraph: {
     title: "Triple M Electric",
     description: "Modern electrical services across Toronto and the GTA.",
@@ -29,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SiteHeader />
           <main>{children}</main>
           <SiteFooter />
+          <StickyContactCta />
         </div>
       </body>
     </html>
