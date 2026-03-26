@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Building2, Factory, Home, PhoneCall } from "lucide-react";
 import { Reveal } from "@/components/reveal";
@@ -12,43 +13,34 @@ const audienceIcons = {
 export default function HomePage() {
   return (
     <div>
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-grid bg-[size:42px_42px] opacity-10" />
-        <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 pb-20 pt-14 md:grid-cols-[1.1fr_0.9fr] md:px-8 md:pb-24 md:pt-24">
-          <Reveal>
-            <p className="mb-4 inline-flex rounded-full border border-slateBlue/40 bg-slateBlue/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slateBlue">
-              Licensed Electricians in Toronto & GTA
+      <section className="relative isolate min-h-[76vh] overflow-hidden md:min-h-[82vh]">
+        <Image src="/TME-banner.jpg" alt="Electrical lighting banner" fill priority className="object-cover object-center" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,8,18,0.78)_0%,rgba(2,8,18,0.64)_38%,rgba(2,8,18,0.4)_60%,rgba(2,8,18,0.6)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_28%,rgba(79,198,255,0.22),transparent_48%)]" />
+
+        <div className="relative mx-auto flex w-full max-w-6xl items-center px-5 py-16 md:px-8 md:py-24">
+          <Reveal className="max-w-2xl">
+            <p className="mb-4 inline-flex border-b-2 border-amber-300 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-sand/90 md:text-sm">
+              Licensed Electricians Toronto & GTA
             </p>
-            <h1 className="max-w-xl font-[var(--font-display)] text-4xl font-bold leading-tight md:text-6xl">
+            <h1 className="max-w-xl font-[var(--font-display)] text-4xl font-bold leading-tight md:text-7xl">Triple M Electric</h1>
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-sand/90 md:text-3xl md:leading-snug">
               Modern electrical services that are safe, fast, and done right.
-            </h1>
+            </p>
             <p className="mt-6 max-w-xl text-base text-sand/80 md:text-lg">
               Triple M Electric handles residential, commercial, and industrial projects with licensed professionals and clear communication from start to finish.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <a
-                href="#contact"
-                className="inline-flex items-center gap-2 rounded-full bg-ember px-6 py-3 text-sm font-bold text-white transition hover:brightness-110"
-              >
-                Get a Free Quote <ArrowRight size={16} />
+              <a href="#contact" className="inline-flex items-center gap-2 rounded-full bg-ember px-6 py-3 text-sm font-bold text-white transition hover:brightness-110">
+                Contact Us <ArrowRight size={16} />
               </a>
               <a
                 href={`tel:${contactInfo.phone.replace(/[^\d+]/g, "")}`}
-                className="inline-flex items-center gap-2 rounded-full border border-sand/30 px-6 py-3 text-sm font-semibold transition hover:border-sand/60"
+                className="inline-flex items-center gap-2 rounded-full border border-sand/40 bg-black/20 px-6 py-3 text-sm font-semibold transition hover:border-sand/70"
               >
                 <PhoneCall size={16} />
-                Call {contactInfo.phone}
+                {contactInfo.phone}
               </a>
-            </div>
-          </Reveal>
-          <Reveal delay={0.15}>
-            <div className="rounded-3xl border border-white/15 bg-white/5 p-6 shadow-glow">
-              <p className="text-sm uppercase tracking-[0.2em] text-sand/60">Why Triple M</p>
-              <ul className="mt-6 space-y-4 text-sm text-sand/85">
-                <li className="rounded-2xl border border-white/10 bg-black/20 p-4">Licensed and insured electrical contractor</li>
-                <li className="rounded-2xl border border-white/10 bg-black/20 p-4">24/7 emergency service availability</li>
-                <li className="rounded-2xl border border-white/10 bg-black/20 p-4">Clean installations and code-compliant delivery</li>
-              </ul>
             </div>
           </Reveal>
         </div>
