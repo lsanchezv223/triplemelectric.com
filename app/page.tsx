@@ -4,6 +4,7 @@ import { ArrowRight, BadgeCheck, Building2, Factory, Home, Mail, MapPin, Message
 import { PortfolioTabs } from "@/components/portfolio-tabs";
 import { Reveal } from "@/components/reveal";
 import { ContactForm } from "@/components/contact-form";
+import { EmergencyCta } from "@/components/emergency-cta";
 import { contactInfo } from "@/lib/site-data";
 
 const serviceColumns = [
@@ -104,6 +105,12 @@ export default function HomePage() {
             </div>
           </Reveal>
         </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-5 pt-10 md:px-8 md:pt-12">
+        <Reveal>
+          <EmergencyCta />
+        </Reveal>
       </section>
 
       <section id="services" className="mx-auto w-full max-w-6xl px-5 py-16 md:px-8 md:py-24">
