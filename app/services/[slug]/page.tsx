@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Reveal } from "@/components/reveal";
-import { EmergencyCta } from "@/components/emergency-cta";
 import { contactInfo, services } from "@/lib/site-data";
 
 type ServicePageProps = {
@@ -1026,12 +1025,6 @@ export default async function ServicePage({ params }: ServicePageProps) {
           </>
         )}
       </Reveal>
-
-      <div className="mt-8">
-        <Reveal delay={0.08}>
-          <EmergencyCta />
-        </Reveal>
-      </div>
 
       {slug === "electrical-installations" ? (
         <ElectricalInstallationsDetail />
