@@ -23,13 +23,15 @@ export default async function ServicePage({ params }: ServicePageProps) {
   return (
     <div className="mx-auto w-full max-w-5xl px-5 py-14 md:px-8 md:py-20">
       <Reveal>
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-sand/80 transition hover:text-sand">
-          <ArrowLeft size={16} />
-          Back to home
-        </Link>
-        <p className="mt-8 inline-flex rounded-full border border-slateBlue/40 bg-slateBlue/10 px-4 py-1 text-xs uppercase tracking-[0.18em] text-slateBlue">
-          {service.audience} Service
-        </p>
+        <div className="flex flex-col items-start gap-4">
+          <Link href="/#services" className="inline-flex items-center gap-2 text-sm text-sand/80 transition hover:text-sand">
+            <ArrowLeft size={16} />
+            Back to home
+          </Link>
+          <p className="inline-flex rounded-full border border-slateBlue/40 bg-slateBlue/10 px-4 py-1 text-xs uppercase tracking-[0.18em] text-slateBlue">
+            {service.audience} Service
+          </p>
+        </div>
         <h1 className="mt-4 max-w-3xl font-[var(--font-display)] text-4xl font-bold leading-tight md:text-6xl">{service.title}</h1>
         <p className="mt-5 max-w-3xl text-sand/80 md:text-lg">{service.description}</p>
       </Reveal>

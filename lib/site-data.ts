@@ -16,6 +16,42 @@ export const contactInfo = {
 
 export const services: ServiceItem[] = [
   {
+    title: "Electrical Installations",
+    slug: "electrical-installations",
+    short: "Safe and code-compliant electrical installations for new and existing spaces.",
+    description:
+      "We provide complete electrical installations for homes and businesses, from planning and wiring to final setup with safety and quality as top priorities.",
+    bullets: ["New wiring installations", "Fixture and outlet setup", "Dedicated circuit installation", "Code-compliant finishing"],
+    audience: "Residential"
+  },
+  {
+    title: "Electrical Repairs",
+    slug: "electrical-repairs",
+    short: "Fast diagnostics and dependable repairs for electrical issues.",
+    description:
+      "From recurring breaker trips to non-working outlets and lighting failures, our team diagnoses problems quickly and resolves them safely.",
+    bullets: ["Troubleshooting and diagnostics", "Circuit and breaker repairs", "Outlet and switch repair", "Emergency repair support"],
+    audience: "Residential"
+  },
+  {
+    title: "Panel Upgrades",
+    slug: "panel-upgrades",
+    short: "Panel upgrades to support modern electrical demand.",
+    description:
+      "We upgrade outdated or overloaded electrical panels so your property can safely support current and future power needs.",
+    bullets: ["Service panel replacement", "Breaker upgrades", "Load balancing", "Safety and code updates"],
+    audience: "Residential"
+  },
+  {
+    title: "Lighting Solutions",
+    slug: "lighting-solutions",
+    short: "Custom indoor and outdoor lighting with clean execution.",
+    description:
+      "Our lighting solutions improve comfort, visibility, and efficiency with designs tailored to your property and usage needs.",
+    bullets: ["Interior lighting design", "Exterior and landscape lighting", "LED upgrades", "Smart lighting controls"],
+    audience: "Residential"
+  },
+  {
     title: "Interior & Exterior Lighting",
     slug: "electrical-lighting",
     short: "Lighting design and installation for safer, brighter spaces.",
@@ -41,6 +77,15 @@ export const services: ServiceItem[] = [
       "We modernize old electrical systems and service panels to improve safety, avoid overloads, and support today's appliances and EV chargers.",
     bullets: ["Breaker panel replacement", "Whole-home rewiring", "Code corrections", "Load calculations"],
     audience: "Residential"
+  },
+  {
+    title: "Electrical Maintenance",
+    slug: "electrical-maintenance",
+    short: "Preventive maintenance to reduce downtime and avoid failures.",
+    description:
+      "Routine electrical maintenance keeps your systems reliable and compliant while helping detect issues before they become costly disruptions.",
+    bullets: ["Preventive maintenance plans", "Inspection and testing", "System performance checks", "Corrective recommendations"],
+    audience: "Commercial"
   },
   {
     title: "EV Charger Installation",

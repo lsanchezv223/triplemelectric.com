@@ -10,43 +10,43 @@ const serviceColumns = [
     title: "Residential Electrical Services",
     icon: Home,
     items: [
-      "Electrical Installations",
-      "Electrical Repairs",
-      "Panel Upgrades",
-      "Lighting Solutions",
-      "Home Automation",
-      "Safety Inspections",
-      "Surge Protection",
-      "Electrical Vehicle (EV) Charger Installation",
-      "Emergency Service Calls 24/7"
+      { label: "Electrical Installations", href: "/services/electrical-installations", featured: true },
+      { label: "Electrical Repairs", href: "/services/electrical-repairs", featured: true },
+      { label: "Panel Upgrades", href: "/services/panel-upgrades", featured: true },
+      { label: "Lighting Solutions", href: "/services/lighting-solutions", featured: true },
+      { label: "Home Automation" },
+      { label: "Safety Inspections" },
+      { label: "Surge Protection" },
+      { label: "Electrical Vehicle (EV) Charger Installation" },
+      { label: "Emergency Service Calls 24/7" }
     ]
   },
   {
     title: "Commercial Electrical Services",
     icon: Building2,
     items: [
-      "Commercial Lighting",
-      "Energy Management",
-      "Data and Communication Lines",
-      "Electrical Maintenance",
-      "Emergency Lighting",
-      "Electrical Upgrades",
-      "Generator Installation",
-      "Electrical Vehicle (EV) Charger Installation",
-      "Emergency Service Calls 24/7"
+      { label: "Commercial Lighting", href: "/services/commercial-lighting", featured: true },
+      { label: "Energy Management" },
+      { label: "Data and Communication Lines" },
+      { label: "Electrical Maintenance", href: "/services/electrical-maintenance", featured: true },
+      { label: "Emergency Lighting" },
+      { label: "Electrical Upgrades" },
+      { label: "Generator Installation" },
+      { label: "Electrical Vehicle (EV) Charger Installation" },
+      { label: "Emergency Service Calls 24/7" }
     ]
   },
   {
     title: "Industrial Electrical Services",
     icon: Factory,
     items: [
-      "Industrial Equipment Installation",
-      "Control System Integration",
-      "Motor Control Centers",
-      "Preventive Maintenance",
-      "Power Distribution",
-      "Plant Relocation and Upgrades",
-      "Emergency Service Calls 24/7"
+      { label: "Industrial Equipment Installation" },
+      { label: "Control System Integration" },
+      { label: "Motor Control Centers" },
+      { label: "Preventive Maintenance" },
+      { label: "Power Distribution" },
+      { label: "Plant Relocation and Upgrades" },
+      { label: "Emergency Service Calls 24/7" }
     ]
   }
 ];
@@ -124,9 +124,15 @@ export default function HomePage() {
                   <h3 className="text-xl font-bold leading-tight">{column.title}</h3>
                   <ul className="mt-5 space-y-3 text-base text-sand/80">
                     {column.items.map((item) => (
-                      <li key={item} className="flex items-start gap-3">
+                      <li key={item.label} className="flex items-start gap-3">
                         <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slateBlue" />
-                        <span>{item}</span>
+                        {item.href ? (
+                          <Link href={item.href} className={`transition hover:underline ${item.featured ? "text-amber-300" : ""}`}>
+                            {item.label}
+                          </Link>
+                        ) : (
+                          <span className={item.featured ? "text-amber-300" : ""}>{item.label}</span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -378,7 +384,12 @@ export default function HomePage() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-slateBlue">Phone Number</p>
-                  <p className="mt-1 text-sm text-amber-300">{contactInfo.phone}</p>
+                  <a
+                    href={`tel:${contactInfo.phone.replace(/[^\d+]/g, "")}`}
+                    className="mt-1 inline-block text-sm text-amber-300 transition hover:text-amber-200"
+                  >
+                    {contactInfo.phone}
+                  </a>
                 </div>
               </article>
 
@@ -388,7 +399,12 @@ export default function HomePage() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-slateBlue">Email Address</p>
-                  <p className="mt-1 text-sm text-sand/80">{contactInfo.email}</p>
+                  <a
+                    href={`mailto:${contactInfo.email}`}
+                    className="mt-1 inline-block text-sm text-sand/80 transition hover:text-sand"
+                  >
+                    {contactInfo.email}
+                  </a>
                 </div>
               </article>
 
@@ -398,7 +414,14 @@ export default function HomePage() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-slateBlue">WhatsApp</p>
-                  <p className="mt-1 text-sm text-sand/80">{contactInfo.phone}</p>
+                  <a
+                    href={`https://wa.me/${contactInfo.phone.replace(/[^\d]/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-block text-sm text-sand/80 transition hover:text-sand"
+                  >
+                    {contactInfo.phone}
+                  </a>
                 </div>
               </article>
 
