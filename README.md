@@ -57,6 +57,10 @@ Notes:
 - `CONTACT_TO_EMAIL` is the recipient inbox.
 - `CONTACT_FROM_EMAIL` is the sender shown in the message.
 - If `CONTACT_TO_EMAIL` is omitted, it defaults to `info@triplemelectric.ca`.
+- Contact API includes basic anti-abuse hardening:
+  - Honeypot fields
+  - Minimum form-fill time validation
+  - Per-IP rate limiting (`5` attempts per `10` minutes)
 
 ## Current sections included
 

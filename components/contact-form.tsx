@@ -8,6 +8,8 @@ type FormState = {
   phone: string;
   message: string;
   website: string;
+  company: string;
+  submittedAt: number;
 };
 
 const initialState: FormState = {
@@ -15,7 +17,9 @@ const initialState: FormState = {
   email: "",
   phone: "",
   message: "",
-  website: ""
+  website: "",
+  company: "",
+  submittedAt: Date.now()
 };
 
 export function ContactForm() {
@@ -46,7 +50,7 @@ export function ContactForm() {
       }
 
       setResult("success");
-      setForm(initialState);
+      setForm({ ...initialState, submittedAt: Date.now() });
     } catch {
       setResult("error");
       setErrorMsg("Could not send your message.");
@@ -94,6 +98,14 @@ export function ContactForm() {
           autoComplete="off"
           value={form.website}
           onChange={(event) => setForm((prev) => ({ ...prev, website: event.target.value }))}
+          className="hidden"
+          aria-hidden="true"
+        />
+        <input
+          tabIndex={-1}
+          autoComplete="off"
+          value={form.company}
+          onChange={(event) => setForm((prev) => ({ ...prev, company: event.target.value }))}
           className="hidden"
           aria-hidden="true"
         />
