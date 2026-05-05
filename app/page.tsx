@@ -9,14 +9,14 @@ import { EmergencyCta } from "@/components/emergency-cta";
 import { contactInfo } from "@/lib/site-data";
 
 export const metadata: Metadata = {
-  title: "Licensed Electricians in Toronto & GTA | Triple M Electric",
+  title: "Triple M Electric",
   description:
     "Triple M Electric provides licensed residential, commercial, and industrial electrical services in Toronto and the GTA. Get fast, safe, code-compliant work.",
   alternates: {
     canonical: "/"
   },
   openGraph: {
-    title: "Licensed Electricians in Toronto & GTA | Triple M Electric",
+    title: "Triple M Electric",
     description:
       "Residential, commercial, and industrial electrical services in Toronto and the GTA by licensed electricians.",
     url: "https://triplemelectric.ca/",
