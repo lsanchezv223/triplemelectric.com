@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -11,6 +12,40 @@ type ServicePageProps = {
 
 export function generateStaticParams() {
   return services.map((service) => ({ slug: service.slug }));
+}
+
+export async function generateMetadata({ params }: ServicePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const service = services.find((item) => item.slug === slug);
+
+  if (!service) {
+    return {
+      title: "Service Not Found | Triple M Electric",
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
+
+  const title = `${service.title} in Toronto & GTA | Triple M Electric`;
+  const description = service.description;
+  const url = `https://triplemelectric.ca/services/${service.slug}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/services/${service.slug}`
+    },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "Triple M Electric",
+      type: "website"
+    }
+  };
 }
 
 function ElectricalInstallationsDetail() {
