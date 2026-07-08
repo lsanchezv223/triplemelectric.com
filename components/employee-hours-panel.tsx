@@ -187,6 +187,9 @@ function TimePickerField({
       return;
     }
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
@@ -194,7 +197,10 @@ function TimePickerField({
     }
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [isOpen]);
 
   function applyTime() {
@@ -226,8 +232,8 @@ function TimePickerField({
       </div>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 text-slate-900 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+          <div className="my-auto w-full max-w-md rounded-[1.75rem] border border-white/10 bg-white p-6 text-slate-900 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Enter Time</p>
@@ -348,6 +354,19 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isEntryModalOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isEntryModalOpen]);
 
   const entriesByDate = useMemo(() => groupEntriesByDate(entries), [entries]);
   const selectedEntries = entriesByDate[selectedDate] || [];
@@ -689,8 +708,8 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
       </section>
 
       {isEntryModalOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-3xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+          <div className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
@@ -716,7 +735,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6 md:px-8">
+            <form onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto px-6 py-6 md:px-8">
               <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                 <div className="space-y-2">
                   <label htmlFor="location" className="block text-sm font-semibold text-sand">
@@ -837,7 +856,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
 
               {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
-              <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-t border-white/10 pt-5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
                   onClick={() => resetForm(selectedDate)}

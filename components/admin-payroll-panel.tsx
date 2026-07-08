@@ -229,7 +229,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
             onSubmit={updateRange}
             className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_auto_auto] xl:items-end"
           >
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 space-y-2 overflow-hidden">
               <label htmlFor="payroll-start" className="block text-sm font-semibold text-sand">
                 Start date
               </label>
@@ -239,11 +239,11 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                 type="date"
                 value={rangeStart}
                 onChange={(event) => setRangeStart(event.target.value)}
-                className="w-full min-w-0 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                className="block w-full min-w-0 max-w-full appearance-none overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
               />
             </div>
 
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 space-y-2 overflow-hidden">
               <label htmlFor="payroll-end" className="block text-sm font-semibold text-sand">
                 End date
               </label>
@@ -253,7 +253,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                 type="date"
                 value={rangeEnd}
                 onChange={(event) => setRangeEnd(event.target.value)}
-                className="w-full min-w-0 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                className="block w-full min-w-0 max-w-full appearance-none overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
               />
             </div>
 
