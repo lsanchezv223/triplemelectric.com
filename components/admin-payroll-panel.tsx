@@ -207,14 +207,16 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Payroll emails</p>
-            <h2 className="mt-3 font-[var(--font-display)] text-3xl font-bold text-white">Weekly payroll summary</h2>
+            <h2 className="mt-3 max-w-xl font-[var(--font-display)] text-3xl font-bold text-white md:text-4xl">
+              Weekly payroll summary
+            </h2>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-sand/70">
               Build a weekly payroll email, keep the recipient and CC list stored in the database, and send a clean summary
               like the sample you shared.
             </p>
           </div>
 
-          <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-5 py-4 text-right">
+          <div className="rounded-[1.4rem] border border-white/10 bg-black/20 px-5 py-4 text-left sm:text-right">
             <p className="text-xs uppercase tracking-[0.14em] text-sand/45">Selected period</p>
             <p className="mt-2 text-lg font-semibold text-sand/75">{periodLabel}</p>
             <p className="mt-1 text-3xl font-bold text-white">{formatCurrency(totalAmount)}</p>
@@ -222,9 +224,12 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           </div>
         </div>
 
-        <div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/20 p-4">
-          <form onSubmit={updateRange} className="grid gap-4 xl:grid-cols-[1.2fr_1.2fr_auto_auto] xl:items-end">
-            <div className="space-y-2">
+        <div className="mt-6 rounded-[1.4rem] border border-white/10 bg-black/20 p-4 sm:p-5">
+          <form
+            onSubmit={updateRange}
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_auto_auto] xl:items-end"
+          >
+            <div className="min-w-0 space-y-2">
               <label htmlFor="payroll-start" className="block text-sm font-semibold text-sand">
                 Start date
               </label>
@@ -234,11 +239,11 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                 type="date"
                 value={rangeStart}
                 onChange={(event) => setRangeStart(event.target.value)}
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                className="w-full min-w-0 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <label htmlFor="payroll-end" className="block text-sm font-semibold text-sand">
                 End date
               </label>
@@ -248,27 +253,27 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                 type="date"
                 value={rangeEnd}
                 onChange={(event) => setRangeEnd(event.target.value)}
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                className="w-full min-w-0 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
               />
             </div>
 
             <button
               type="submit"
-              className="inline-flex h-[3.5rem] items-center justify-center rounded-full bg-amber-400 px-5 text-sm font-bold text-black transition hover:brightness-110"
+              className="inline-flex h-[3.5rem] w-full items-center justify-center rounded-full bg-amber-400 px-5 text-sm font-bold text-black transition hover:brightness-110 sm:col-span-2 xl:col-span-1"
             >
               Update range
             </button>
 
             <a
               href={currentWeekHref}
-              className="inline-flex h-[3.5rem] items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-sand/80 transition hover:border-white/30 hover:text-white"
+              className="inline-flex h-[3.5rem] w-full items-center justify-center rounded-full border border-white/15 px-5 text-sm font-semibold text-sand/80 transition hover:border-white/30 hover:text-white sm:col-span-2 xl:col-span-1"
             >
               Current week
             </a>
           </form>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_1.1fr_auto] xl:items-end">
-            <div className="space-y-2">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.1fr_1.1fr_auto] xl:items-end">
+            <div className="min-w-0 space-y-2">
               <label htmlFor="payroll-to-email" className="block text-sm font-semibold text-sand">
                 To email
               </label>
@@ -278,11 +283,11 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                 value={recipient}
                 onChange={(event) => setRecipient(event.target.value)}
                 placeholder="payroll@company.com"
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                className="w-full min-w-0 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <label htmlFor="payroll-cc-emails" className="block text-sm font-semibold text-sand">
                 CC emails
               </label>
@@ -292,7 +297,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                 value={ccEmails}
                 onChange={(event) => setCcEmails(event.target.value)}
                 placeholder="copy1@company.com, copy2@company.com"
-                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                className="w-full min-w-0 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
               />
             </div>
 
@@ -300,7 +305,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
               type="button"
               onClick={saveSettings}
               disabled={isSaving}
-              className="inline-flex h-[3.5rem] items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-[3.5rem] w-full items-center justify-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white transition hover:border-white/30 disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2 xl:col-span-1"
             >
               <Save size={16} />
               {isSaving ? "Saving..." : "Save"}

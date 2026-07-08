@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserFromSession } from "@/lib/auth/session";
-import { sendUserAccessLink } from "@/lib/admin/users";
+import { getPublicBaseUrl, sendUserAccessLink } from "@/lib/admin/users";
 
 export async function POST(request: Request, context: { params: Promise<{ userId: string }> }) {
   const admin = await getCurrentUserFromSession();
@@ -29,7 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ userId
       invitedById: admin.id,
       email: user.email,
       fullName: user.fullName,
-      requestUrl: request.url,
+      baseUrl: getPublicBaseUrl(request),
       mode: user.passwordHash ? "reset" : "invite"
     });
 
@@ -37,7 +37,14 @@ export async function POST(request: Request, context: { params: Promise<{ userId
       ok: true,
       expiresAt: expiresAt.toISOString()
     });
-  } catch {
+  } catch (error) {
+    console.error("admin/users/[userId]/password-link error:", error);
+    const message = error instanceof Error ? error.message : "";
+
+    if (message === "SMTP configuration is incomplete.") {
+      return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: false, error: "Unable to send the password link right now." }, { status: 500 });
   }
 }

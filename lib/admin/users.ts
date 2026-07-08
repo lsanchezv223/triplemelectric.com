@@ -3,6 +3,10 @@ import { db } from "@/lib/db";
 import { createInvitationToken, getInvitationExpiry, hashInvitationToken } from "@/lib/auth/invitations";
 import { sendEmail } from "@/lib/email";
 
+function normalizeBaseUrl(value: string) {
+  return value.trim().replace(/\/+$/, "");
+}
+
 export function normalizeUsername(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "");
 }
@@ -15,19 +19,35 @@ export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+export function getPublicBaseUrl(request: Request) {
+  const configuredUrl =
+    process.env.APP_URL || process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || process.env.PUBLIC_SITE_URL;
+
+  if (configuredUrl) {
+    return normalizeBaseUrl(configuredUrl);
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = forwardedHost || request.headers.get("host") || new URL(request.url).host;
+  const proto = forwardedProto || new URL(request.url).protocol.replace(":", "");
+
+  return normalizeBaseUrl(`${proto}://${host}`);
+}
+
 export async function sendUserAccessLink({
   userId,
   invitedById,
   email,
   fullName,
-  requestUrl,
+  baseUrl,
   mode
 }: {
   userId: string;
   invitedById: string;
   email: string;
   fullName: string;
-  requestUrl: string;
+  baseUrl: string;
   mode: "invite" | "reset";
 }) {
   await db.invitation.deleteMany({
@@ -51,7 +71,7 @@ export async function sendUserAccessLink({
     }
   });
 
-  const inviteUrl = new URL("/activate-account", requestUrl);
+  const inviteUrl = new URL("/activate-account", baseUrl);
   inviteUrl.searchParams.set("token", token);
 
   const subject = mode === "reset" ? "Triple M Electric password reset" : "Triple M Electric account invitation";

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserFromSession } from "@/lib/auth/session";
-import { isValidEmail, normalizeEmail, normalizeUsername, parseRole, sendUserAccessLink } from "@/lib/admin/users";
+import {
+  getPublicBaseUrl,
+  isValidEmail,
+  normalizeEmail,
+  normalizeUsername,
+  parseRole,
+  sendUserAccessLink
+} from "@/lib/admin/users";
 
 type InvitePayload = {
   fullName?: string;
@@ -100,12 +107,19 @@ export async function POST(request: Request) {
       invitedById: admin.id,
       email,
       fullName,
-      requestUrl: request.url,
+      baseUrl: getPublicBaseUrl(request),
       mode: "invite"
     });
 
     return NextResponse.json({ ok: true, expiresAt: expiresAt.toISOString() });
-  } catch {
+  } catch (error) {
+    console.error("admin/users/invite error:", error);
+    const message = error instanceof Error ? error.message : "";
+
+    if (message === "SMTP configuration is incomplete.") {
+      return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: false, error: "Unable to send the invitation right now." }, { status: 500 });
   }
 }
