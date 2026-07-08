@@ -51,6 +51,15 @@ function formatRangeDate(date: Date) {
   }).format(date);
 }
 
+function formatDateField(date: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(date);
+}
+
 function formatWeekdayLabel(date: Date) {
   return new Intl.DateTimeFormat("en-CA", {
     weekday: "short",
@@ -778,26 +787,36 @@ export default async function PanelPage({
                     <label htmlFor="start" className="block text-sm font-semibold text-sand">
                       Start date
                     </label>
-                    <input
-                      id="start"
-                      name="start"
-                      type="date"
-                      defaultValue={toDateKey(normalizedRangeStart)}
-                      className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-                    />
+                    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
+                      <span className="block pr-8 text-sm text-white">
+                        {formatDateField(normalizedRangeStart)}
+                      </span>
+                      <input
+                        id="start"
+                        name="start"
+                        type="date"
+                        defaultValue={toDateKey(normalizedRangeStart)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <label htmlFor="end" className="block text-sm font-semibold text-sand">
                       End date
                     </label>
-                    <input
-                      id="end"
-                      name="end"
-                      type="date"
-                      defaultValue={toDateKey(normalizedRangeEnd)}
-                      className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-                    />
+                    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
+                      <span className="block pr-8 text-sm text-white">
+                        {formatDateField(normalizedRangeEnd)}
+                      </span>
+                      <input
+                        id="end"
+                        name="end"
+                        type="date"
+                        defaultValue={toDateKey(normalizedRangeEnd)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-3 md:col-span-2 md:flex-row xl:col-span-1 xl:self-end">

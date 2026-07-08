@@ -64,6 +64,15 @@ function formatShortDate(value: string) {
   }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
 }
 
+function formatDateField(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
+}
+
 function getStatusLabel(status: PayrollEntry["status"]) {
   if (status === "APPROVED") {
     return "Approved";
@@ -229,33 +238,19 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
             onSubmit={updateRange}
             className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_auto_auto] xl:items-end"
           >
-            <div className="min-w-0 space-y-2 overflow-hidden">
-              <label htmlFor="payroll-start" className="block text-sm font-semibold text-sand">
-                Start date
-              </label>
-              <input
-                id="payroll-start"
-                name="start"
-                type="date"
-                value={rangeStart}
-                onChange={(event) => setRangeStart(event.target.value)}
-                className="block w-full min-w-0 max-w-full appearance-none overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-              />
-            </div>
+            <DateField
+              id="payroll-start"
+              label="Start date"
+              value={rangeStart}
+              onChange={setRangeStart}
+            />
 
-            <div className="min-w-0 space-y-2 overflow-hidden">
-              <label htmlFor="payroll-end" className="block text-sm font-semibold text-sand">
-                End date
-              </label>
-              <input
-                id="payroll-end"
-                name="end"
-                type="date"
-                value={rangeEnd}
-                onChange={(event) => setRangeEnd(event.target.value)}
-                className="block w-full min-w-0 max-w-full appearance-none overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-              />
-            </div>
+            <DateField
+              id="payroll-end"
+              label="End date"
+              value={rangeEnd}
+              onChange={setRangeEnd}
+            />
 
             <button
               type="submit"
@@ -432,6 +427,39 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
         />
       ) : null}
     </>
+  );
+}
+
+function DateField({
+  id,
+  label,
+  value,
+  onChange
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <label htmlFor={id} className="block text-sm font-semibold text-sand">
+        {label}
+      </label>
+      <div className="relative min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
+        <span className={`block min-w-0 truncate pr-8 text-sm ${value ? "text-white" : "text-sand/45"}`}>
+          {value ? formatDateField(value) : "Select date"}
+        </span>
+        <input
+          id={id}
+          name={id}
+          type="date"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="absolute inset-0 h-full w-full cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0 outline-none"
+        />
+      </div>
+    </div>
   );
 }
 
