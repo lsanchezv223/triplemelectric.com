@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "WorkEntryStatus" ADD VALUE IF NOT EXISTS 'APPROVED';

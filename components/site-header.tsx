@@ -35,6 +35,9 @@ export function SiteHeader() {
               {link.label}
             </a>
           ))}
+          <Link href="/login" className="transition hover:text-sand">
+            Employees
+          </Link>
         </nav>
 
         <button
@@ -61,6 +64,13 @@ export function SiteHeader() {
                 {link.label}
               </a>
             ))}
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-sand/85 transition hover:bg-white/10 hover:text-sand"
+            >
+              Employees
+            </Link>
           </nav>
         </div>
       ) : null}

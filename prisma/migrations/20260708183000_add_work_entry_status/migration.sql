@@ -1,0 +1,4 @@
+CREATE TYPE "WorkEntryStatus" AS ENUM ('IN_PROGRESS', 'INVOICED');
+
+ALTER TABLE "work_entries"
+ADD COLUMN "status" "WorkEntryStatus" NOT NULL DEFAULT 'IN_PROGRESS';
