@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock3, Eye, Paperclip, Pencil, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, Paperclip, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EntryDetailsModal } from "@/components/entry-details-modal";
 import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
@@ -54,7 +54,11 @@ function formatLongDate(value: string) {
 const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function formatMonthTitle(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", { month: "long", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("en-CA", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(date);
 }
 
 function toDateKey(date: Date) {
@@ -388,6 +392,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     attachments: EntryAttachmentItem[];
   } | null>(null);
   const [detailsViewer, setDetailsViewer] = useState<Entry | null>(null);
+  const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
   useEffect(() => {
     if (!isEntryModalOpen) {
@@ -407,9 +412,15 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
   const selectedTotal = selectedEntries.reduce((sum, entry) => sum + entry.totalHours, 0);
   const calendarDays = useMemo(() => getCalendarDays(visibleMonth), [visibleMonth]);
 
+  function syncVisibleMonth(dateKey: string) {
+    const [year, month] = dateKey.split("-").map(Number);
+    setVisibleMonth(new Date(Date.UTC(year, month - 1, 1)));
+  }
+
   function resetForm(dateKey: string) {
     setForm(buildInitialForm(dateKey));
     setAttachmentFiles([]);
+    setShowOptionalDetails(false);
   }
 
   function openNewEntryModal() {
@@ -417,11 +428,13 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     setError("");
     setSuccess("");
     setAttachmentFiles([]);
+    setShowOptionalDetails(false);
     setIsEntryModalOpen(true);
   }
 
   function handleSelectDate(dateKey: string) {
     setSelectedDate(dateKey);
+    syncVisibleMonth(dateKey);
     resetForm(dateKey);
     setError("");
     setSuccess("");
@@ -434,10 +447,12 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
       return;
     }
 
-    setSelectedDate(entry.workDate.slice(0, 10));
+    const entryDateKey = entry.workDate.slice(0, 10);
+    setSelectedDate(entryDateKey);
+    syncVisibleMonth(entryDateKey);
     setForm({
       id: entry.id,
-      workDate: entry.workDate.slice(0, 10),
+      workDate: entryDateKey,
       clientName: entry.clientName || "",
       location: entry.location,
       startTime: toTimeInput(entry.startTime),
@@ -451,6 +466,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     setError("");
     setSuccess("");
     setAttachmentFiles([]);
+    setShowOptionalDetails(false);
     setIsEntryModalOpen(true);
   }
 
@@ -506,7 +522,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
       const payload = {
         workDate: form.workDate,
         clientName: form.clientName,
-        location: form.location,
+        location: form.location.trim() || "No location",
         startTime: form.startTime,
         endTime: form.endTime,
         breakMinutes: Number(form.breakMinutes || 0),
@@ -850,46 +866,66 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
             </div>
 
             <form onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto px-6 py-6 md:px-8">
-              <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
-                <div className="space-y-2">
-                  <label htmlFor="client-name" className="block text-sm font-semibold text-sand">
-                    Client name
-                  </label>
-                  <input
-                    id="client-name"
-                    value={form.clientName}
-                    onChange={(event) => setForm((current) => ({ ...current, clientName: event.target.value }))}
-                    className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-                    placeholder="Client name"
+              <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03]">
+                <button
+                  type="button"
+                  onClick={() => setShowOptionalDetails((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-white">Optional details</p>
+                    <p className="mt-1 text-xs text-sand/55">Client and location can be added if you want to keep them on file.</p>
+                  </div>
+                  <ChevronDown
+                    size={18}
+                    className={`text-sand/65 transition-transform ${showOptionalDetails ? "rotate-180" : ""}`}
                   />
-                </div>
+                </button>
 
-                <div className="space-y-2">
-                  <label htmlFor="location" className="block text-sm font-semibold text-sand">
-                    Location
-                  </label>
-                  <input
-                    id="location"
-                    value={form.location}
-                    onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
-                    className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-                    placeholder="167 Caster"
-                    required
-                  />
-                </div>
+                {showOptionalDetails ? (
+                  <div className="space-y-4 border-t border-white/10 px-4 pb-4 pt-4">
+                    <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+                      <div className="space-y-2">
+                        <label htmlFor="client-name" className="block text-sm font-semibold text-sand">
+                          Client name
+                        </label>
+                        <input
+                          id="client-name"
+                          value={form.clientName}
+                          onChange={(event) => setForm((current) => ({ ...current, clientName: event.target.value }))}
+                          className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                          placeholder="Client name"
+                        />
+                      </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <label htmlFor="company" className="block text-sm font-semibold text-sand">
-                    Company
-                  </label>
-                  <input
-                    id="company"
-                    value={form.company}
-                    onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))}
-                    className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
-                    placeholder="Triple M Electric"
-                  />
-                </div>
+                      <div className="space-y-2">
+                        <label htmlFor="location" className="block text-sm font-semibold text-sand">
+                          Location
+                        </label>
+                        <input
+                          id="location"
+                          value={form.location}
+                          onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
+                          className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                          placeholder="167 Caster"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="company" className="block text-sm font-semibold text-sand">
+                  Company
+                </label>
+                <input
+                  id="company"
+                  value={form.company}
+                  onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))}
+                  className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                  placeholder="Triple M Electric"
+                />
               </div>
 
               {currentUserRole === "ADMIN" ? (
