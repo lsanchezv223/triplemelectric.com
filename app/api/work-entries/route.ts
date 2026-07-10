@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { WorkEntryStatus } from "@prisma/client";
 import { getCurrentUserFromSession } from "@/lib/auth/session";
+import { getPublicBaseUrl } from "@/lib/admin/users";
 import { calculateHours, parseDateInput, parseTimeForDate } from "@/lib/work-entries";
 import { db } from "@/lib/db";
+import { prepareAttachmentFile, uploadPreparedAttachmentToR2 } from "@/lib/r2";
+import { sendWorkEntryChangeToAdmins } from "@/lib/admin/work-entry-notifications";
 
 type WorkEntryPayload = {
   workDate?: string;
@@ -32,6 +35,23 @@ function parseWorkEntryStatus(value?: string) {
   return WorkEntryStatus.IN_PROGRESS;
 }
 
+async function parseEntryRequest(request: Request) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const payload = JSON.parse(String(formData.get("payload") || "{}")) as WorkEntryPayload;
+    const attachments = formData
+      .getAll("attachments")
+      .filter((value): value is File => value instanceof File && value.size > 0);
+
+    return { payload, attachments };
+  }
+
+  const payload = (await request.json()) as WorkEntryPayload;
+  return { payload, attachments: [] as File[] };
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUserFromSession();
 
@@ -40,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as WorkEntryPayload;
+    const { payload: body, attachments } = await parseEntryRequest(request);
     const workDateInput = String(body.workDate || "");
     const location = String(body.location || "").trim();
     const startTimeInput = String(body.startTime || "");
@@ -116,8 +136,57 @@ export async function POST(request: Request) {
       }
     });
 
+    const preparedAttachments = attachments.length ? await Promise.all(attachments.map((file) => prepareAttachmentFile(file))) : [];
+
+    if (preparedAttachments.length) {
+      const uploadedAttachments = await Promise.all(
+        preparedAttachments.map((attachment) => uploadPreparedAttachmentToR2({ entryId: entry.id, attachment }))
+      );
+
+      await db.workEntryAttachment.createMany({
+        data: uploadedAttachments.map((attachment) => ({
+          workEntryId: entry.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          storageKey: attachment.storageKey
+        }))
+      });
+
+    }
+
+    void sendWorkEntryChangeToAdmins({
+      baseUrl: getPublicBaseUrl(request),
+      entry: {
+        id: entry.id,
+        workDate: entry.workDate.toISOString(),
+        location,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        breakMinutes,
+        totalHours,
+        company: company || null,
+        notes: notes || null,
+        status: requestedStatus || WorkEntryStatus.IN_PROGRESS,
+        hourlyRate:
+          requestedStatus === WorkEntryStatus.APPROVED || requestedStatus === WorkEntryStatus.INVOICED
+            ? hourlyRate
+            : null,
+        user: {
+          fullName: user.fullName,
+          username: user.username
+        }
+      },
+      actorName: user.fullName,
+      action: "created",
+      attachments: preparedAttachments
+    }).catch((error) => {
+      console.error("work-entries notification error:", error);
+    });
+
     return NextResponse.json({ ok: true, entryId: entry.id });
-  } catch {
+  } catch (error) {
+    console.error("work-entries POST error:", error);
     return NextResponse.json({ ok: false, error: "Unable to save the work entry right now." }, { status: 500 });
   }
 }

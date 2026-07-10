@@ -25,12 +25,18 @@ function getTransportConfig() {
 export async function sendEmail({
   to,
   cc,
+  attachments,
   subject,
   text,
   html
 }: {
-  to: string;
+  to: string | string[];
   cc?: string | string[];
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }>;
   subject: string;
   text: string;
   html: string;
@@ -44,6 +50,7 @@ export async function sendEmail({
     from,
     subject,
     text,
-    html
+    html,
+    attachments
   });
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Pencil, ReceiptText, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Paperclip, Pencil, ReceiptText, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EntryDetailsModal } from "@/components/entry-details-modal";
+import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
 
 type TeamUser = {
   id: string;
@@ -23,6 +25,7 @@ type AdminWorkEntry = {
   notes: string | null;
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
   hourlyRate: number | null;
+  attachmentsCount: number;
   user: {
     id: string;
     fullName: string;
@@ -42,6 +45,7 @@ type Props = {
   };
   currentWeekHref: string;
   periodLabel: string;
+  focusEntryId?: string | null;
 };
 
 type EntryFormState = {
@@ -79,6 +83,15 @@ function getEntryPaidAmount(entry: { status: "IN_PROGRESS" | "APPROVED" | "INVOI
   return entry.totalHours * entry.hourlyRate;
 }
 
+function getNotePreview(notes: string | null) {
+  if (!notes) {
+    return "";
+  }
+
+  const trimmed = notes.trim();
+  return trimmed.length > 160 ? `${trimmed.slice(0, 160)}…` : trimmed;
+}
+
 function buildForm(entry: AdminWorkEntry): EntryFormState {
   return {
     id: entry.id,
@@ -94,11 +107,20 @@ function buildForm(entry: AdminWorkEntry): EntryFormState {
   };
 }
 
-export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, periodLabel }: Props) {
+export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, periodLabel, focusEntryId }: Props) {
   const router = useRouter();
   const [selectedAction, setSelectedAction] = useState<{ kind: "edit" | "approve"; entryId: string } | null>(null);
   const [success, setSuccess] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(Boolean(filters.start || filters.end || filters.employee || filters.status));
+  const [attachmentsError, setAttachmentsError] = useState("");
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsViewer, setAttachmentsViewer] = useState<{
+    title: string;
+    subtitle: string;
+    attachments: EntryAttachmentItem[];
+  } | null>(null);
+  const [detailsViewer, setDetailsViewer] = useState<AdminWorkEntry | null>(null);
+  const [focusHandled, setFocusHandled] = useState(false);
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedAction?.entryId) ?? null,
@@ -113,6 +135,56 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
   useEffect(() => {
     setFiltersOpen(Boolean(filters.start || filters.end || filters.employee || filters.status));
   }, [filters.start, filters.end, filters.employee, filters.status]);
+
+  useEffect(() => {
+    if (!focusEntryId || focusHandled || selectedAction) {
+      return;
+    }
+
+    const targetEntry = entries.find((entry) => entry.id === focusEntryId);
+
+    if (targetEntry) {
+      setSelectedAction({ kind: "edit", entryId: targetEntry.id });
+      setFocusHandled(true);
+    }
+  }, [entries, focusEntryId, focusHandled, selectedAction]);
+
+  async function openAttachments(entry: AdminWorkEntry) {
+    setAttachmentsError("");
+    setAttachmentsLoading(true);
+
+    try {
+      const response = await fetch(`/api/work-entries/${entry.id}/attachments`);
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        attachments?: EntryAttachmentItem[];
+      };
+
+      if (!response.ok || !result.ok) {
+        setAttachmentsError(result.error || "Unable to load attachments.");
+        return;
+      }
+
+      setAttachmentsViewer({
+        title: entry.location,
+        subtitle: `${entry.user.fullName} · ${formatLongDate(entry.workDate)}`,
+        attachments: result.attachments || []
+      });
+    } catch {
+      setAttachmentsError("Unable to load attachments.");
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  }
+
+  function openDetails(entry: AdminWorkEntry) {
+    setDetailsViewer(entry);
+  }
+
+  function closeDetails() {
+    setDetailsViewer(null);
+  }
 
   return (
     <>
@@ -261,6 +333,7 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
         </div>
 
         {success ? <p className="mt-4 text-sm text-emerald-300">{success}</p> : null}
+        {attachmentsError ? <p className="mt-2 text-sm text-rose-300">{attachmentsError}</p> : null}
 
         <div className="mt-6 space-y-4">
           {entries.length ? (
@@ -297,9 +370,28 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
                             Rate: ${entry.hourlyRate.toFixed(2)}/h
                           </span>
                         ) : null}
+                        {entry.attachmentsCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openAttachments(entry)}
+                            disabled={attachmentsLoading}
+                            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-sand/70 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Paperclip size={14} />
+                            {entry.attachmentsCount}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => openDetails(entry)}
+                          className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-sand/70 transition hover:border-white/25 hover:text-white"
+                        >
+                          <Eye size={14} />
+                          View more
+                        </button>
                       </div>
 
-                      {entry.notes ? <p className="text-sm leading-relaxed text-sand/75">{entry.notes}</p> : null}
+                      {entry.notes ? <p className="text-sm leading-relaxed text-sand/75">{getNotePreview(entry.notes)}</p> : null}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 xl:max-w-[20rem] xl:justify-end">
@@ -370,6 +462,53 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
             }}
           />
         )
+      ) : null}
+
+      {attachmentsViewer ? (
+        <EntryAttachmentsModal
+          title={attachmentsViewer.title}
+          subtitle={attachmentsViewer.subtitle}
+          attachments={attachmentsViewer.attachments}
+          onClose={() => setAttachmentsViewer(null)}
+        />
+      ) : null}
+
+      {detailsViewer ? (
+        <EntryDetailsModal
+          title={detailsViewer.location}
+          subtitle={`${detailsViewer.user.fullName} · ${formatLongDate(detailsViewer.workDate)}`}
+          statusLabel={
+            detailsViewer.status === "INVOICED"
+              ? "Invoiced"
+              : detailsViewer.status === "APPROVED"
+                ? "Approved"
+                : "In progress"
+          }
+          statusTone={
+            detailsViewer.status === "INVOICED" ? "emerald" : detailsViewer.status === "APPROVED" ? "sky" : "amber"
+          }
+          attachmentsCount={detailsViewer.attachmentsCount}
+          details={[
+            { label: "Employee", value: `${detailsViewer.user.fullName} (@${detailsViewer.user.username})` },
+            { label: "Company", value: detailsViewer.company || "Triple M Electric" },
+            { label: "Date", value: formatLongDate(detailsViewer.workDate) },
+            { label: "Time", value: `${toTimeInput(detailsViewer.startTime)} - ${toTimeInput(detailsViewer.endTime)}` },
+            { label: "Break", value: `${detailsViewer.breakMinutes} min` },
+            { label: "Total hours", value: `${detailsViewer.totalHours.toFixed(2)} h` },
+            { label: "Rate", value: detailsViewer.hourlyRate ? `$${detailsViewer.hourlyRate.toFixed(2)}/h` : "Not set" }
+          ]}
+          notes={detailsViewer.notes}
+          onViewAttachments={
+            detailsViewer.attachmentsCount > 0
+              ? () => {
+                  const currentEntry = detailsViewer;
+                  closeDetails();
+                  void openAttachments(currentEntry);
+                }
+              : undefined
+          }
+          onClose={closeDetails}
+        />
       ) : null}
     </>
   );

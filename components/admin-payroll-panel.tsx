@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Mail, Send, Save, X } from "lucide-react";
+import { Eye, Mail, Send, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EntryDetailsModal } from "@/components/entry-details-modal";
+import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
 
 type PayrollEntry = {
   id: string;
@@ -13,6 +15,7 @@ type PayrollEntry = {
   rate: number;
   amount: number;
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
+  attachmentsCount: number;
   user: {
     id: string;
     fullName: string;
@@ -120,6 +123,14 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [detailsViewer, setDetailsViewer] = useState<PayrollEntry | null>(null);
+  const [attachmentsViewer, setAttachmentsViewer] = useState<{
+    title: string;
+    subtitle: string;
+    attachments: EntryAttachmentItem[];
+  } | null>(null);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsError, setAttachmentsError] = useState("");
 
   const employees = useMemo(() => buildEmployees(entries), [entries]);
   const totalHours = entries.reduce((sum, entry) => sum + entry.totalHours, 0);
@@ -208,6 +219,43 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
     }
 
     router.push(`/panel?view=payroll&start=${rangeStart}&end=${rangeEnd}`);
+  }
+
+  function openDetails(entry: PayrollEntry) {
+    setDetailsViewer(entry);
+  }
+
+  function closeDetails() {
+    setDetailsViewer(null);
+  }
+
+  async function openAttachments(entry: PayrollEntry) {
+    setAttachmentsError("");
+    setAttachmentsLoading(true);
+
+    try {
+      const response = await fetch(`/api/work-entries/${entry.id}/attachments`);
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        attachments?: EntryAttachmentItem[];
+      };
+
+      if (!response.ok || !result.ok) {
+        setAttachmentsError(result.error || "Unable to load attachments.");
+        return;
+      }
+
+      setAttachmentsViewer({
+        title: entry.location,
+        subtitle: `${entry.user.fullName} · ${formatDateField(entry.workDate)}`,
+        attachments: result.attachments || []
+      });
+    } catch {
+      setAttachmentsError("Unable to load attachments.");
+    } finally {
+      setAttachmentsLoading(false);
+    }
   }
 
   return (
@@ -395,6 +443,25 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                         >
                           {getStatusLabel(entry.status)}
                         </span>
+                        {entry.attachmentsCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openDetails(entry)}
+                            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75 transition hover:border-white/25 hover:text-white"
+                          >
+                            <Eye size={14} />
+                            View more
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openDetails(entry)}
+                            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75 transition hover:border-white/25 hover:text-white"
+                          >
+                            <Eye size={14} />
+                            View more
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -408,6 +475,47 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           )}
         </div>
       </section>
+
+      {detailsViewer ? (
+        <EntryDetailsModal
+          title={detailsViewer.location}
+          subtitle={`${detailsViewer.user.fullName} · ${formatDateField(detailsViewer.workDate)}`}
+          statusLabel={getStatusLabel(detailsViewer.status)}
+          statusTone={
+            detailsViewer.status === "INVOICED" ? "emerald" : detailsViewer.status === "APPROVED" ? "sky" : "amber"
+          }
+          attachmentsCount={detailsViewer.attachmentsCount}
+          details={[
+            { label: "Employee", value: `${detailsViewer.user.fullName} (@${detailsViewer.user.username})` },
+            { label: "Company", value: detailsViewer.company || "Triple M Electric" },
+            { label: "Date", value: formatDateField(detailsViewer.workDate) },
+            { label: "Total hours", value: `${detailsViewer.totalHours.toFixed(2)} h` },
+            { label: "Rate", value: `$${detailsViewer.rate.toFixed(2)}/h` },
+            { label: "Amount", value: formatCurrency(detailsViewer.amount) },
+            { label: "Status", value: getStatusLabel(detailsViewer.status) }
+          ]}
+          notes={null}
+          onViewAttachments={
+            detailsViewer.attachmentsCount > 0
+              ? () => {
+                  const currentEntry = detailsViewer;
+                  closeDetails();
+                  void openAttachments(currentEntry);
+                }
+              : undefined
+          }
+          onClose={closeDetails}
+        />
+      ) : null}
+
+      {attachmentsViewer ? (
+        <EntryAttachmentsModal
+          title={attachmentsViewer.title}
+          subtitle={attachmentsViewer.subtitle}
+          attachments={attachmentsViewer.attachments}
+          onClose={() => setAttachmentsViewer(null)}
+        />
+      ) : null}
 
       {isPreviewOpen ? (
         <PayrollPreviewModal

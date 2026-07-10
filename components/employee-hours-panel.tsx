@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock3, Pencil, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, Eye, Paperclip, Pencil, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EntryDetailsModal } from "@/components/entry-details-modal";
+import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
 
 type Entry = {
   id: string;
@@ -16,6 +18,7 @@ type Entry = {
   notes: string | null;
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
   hourlyRate: number | null;
+  attachmentsCount: number;
 };
 
 type Props = {
@@ -35,6 +38,16 @@ type EntryFormState = {
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
   hourlyRate: string;
 };
+
+function formatLongDate(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
+}
 
 const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -83,6 +96,15 @@ function getEntryPaidAmount(entry: Entry) {
   }
 
   return entry.totalHours * entry.hourlyRate;
+}
+
+function getNotePreview(notes: string | null) {
+  if (!notes) {
+    return "";
+  }
+
+  const trimmed = notes.trim();
+  return trimmed.length > 160 ? `${trimmed.slice(0, 160)}…` : trimmed;
 }
 
 function getCalendarDays(monthDate: Date) {
@@ -354,6 +376,15 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [attachmentsError, setAttachmentsError] = useState("");
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [attachmentsViewer, setAttachmentsViewer] = useState<{
+    title: string;
+    subtitle: string;
+    attachments: EntryAttachmentItem[];
+  } | null>(null);
+  const [detailsViewer, setDetailsViewer] = useState<Entry | null>(null);
 
   useEffect(() => {
     if (!isEntryModalOpen) {
@@ -375,12 +406,14 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
 
   function resetForm(dateKey: string) {
     setForm(buildInitialForm(dateKey));
+    setAttachmentFiles([]);
   }
 
   function openNewEntryModal() {
     resetForm(selectedDate);
     setError("");
     setSuccess("");
+    setAttachmentFiles([]);
     setIsEntryModalOpen(true);
   }
 
@@ -413,7 +446,50 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     });
     setError("");
     setSuccess("");
+    setAttachmentFiles([]);
     setIsEntryModalOpen(true);
+  }
+
+  function closeEntryModal() {
+    setIsEntryModalOpen(false);
+    setAttachmentFiles([]);
+  }
+
+  async function openAttachments(entry: Entry) {
+    setAttachmentsError("");
+    setAttachmentsLoading(true);
+
+    try {
+      const response = await fetch(`/api/work-entries/${entry.id}/attachments`);
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        attachments?: EntryAttachmentItem[];
+      };
+
+      if (!response.ok || !result.ok) {
+        setAttachmentsError(result.error || "Unable to load attachments.");
+        return;
+      }
+
+      setAttachmentsViewer({
+        title: entry.location,
+        subtitle: formatLongDate(entry.workDate),
+        attachments: result.attachments || []
+      });
+    } catch {
+      setAttachmentsError("Unable to load attachments.");
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  }
+
+  function openDetails(entry: Entry) {
+    setDetailsViewer(entry);
+  }
+
+  function closeDetails() {
+    setDetailsViewer(null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -439,12 +515,13 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
           : {})
       };
 
+      const body = new FormData();
+      body.append("payload", JSON.stringify(payload));
+      attachmentFiles.forEach((file) => body.append("attachments", file));
+
       const response = await fetch(form.id ? `/api/work-entries/${form.id}` : "/api/work-entries", {
         method: form.id ? "PUT" : "POST",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify(payload)
+        body
       });
 
       const result = (await response.json()) as { ok?: boolean; error?: string };
@@ -456,6 +533,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
 
       setSuccess(form.id ? "Work entry updated." : "Work entry saved.");
       setIsEntryModalOpen(false);
+      setAttachmentFiles([]);
       resetForm(form.workDate);
       router.refresh();
     } catch {
@@ -610,6 +688,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
           </div>
 
           {success ? <p className="mt-4 text-sm text-emerald-300">{success}</p> : null}
+          {attachmentsError ? <p className="mt-2 text-sm text-rose-300">{attachmentsError}</p> : null}
 
           <div className="mt-6 space-y-4">
             {selectedEntries.length ? (
@@ -651,6 +730,25 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                         >
                           {getStatusLabel(entry.status)}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => openDetails(entry)}
+                          className="rounded-full border border-white/15 p-2.5 text-sand/75 transition hover:border-white/30 hover:text-white"
+                          aria-label="View entry details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {entry.attachmentsCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openAttachments(entry)}
+                            disabled={attachmentsLoading}
+                            className="rounded-full border border-white/15 p-2.5 text-sand/75 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label="View attachments"
+                          >
+                            <Paperclip size={16} />
+                          </button>
+                        ) : null}
                         {entry.status === "IN_PROGRESS" ? (
                           <>
                             <button
@@ -688,7 +786,17 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                       ) : null}
                     </div>
 
-                    {entry.notes ? <p className="text-sm leading-relaxed text-sand/75">{entry.notes}</p> : null}
+                    {entry.notes ? <p className="text-sm leading-relaxed text-sand/75">{getNotePreview(entry.notes)}</p> : null}
+                    {entry.notes ? (
+                      <button
+                        type="button"
+                        onClick={() => openDetails(entry)}
+                        className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-amber-200 transition hover:text-amber-100"
+                      >
+                        View more
+                        <Eye size={14} />
+                      </button>
+                    ) : null}
                     {entry.status !== "IN_PROGRESS" ? (
                       <p className="text-xs font-medium text-emerald-200/85">
                         Locked after approval. Only a payroll action can move this record forward.
@@ -727,7 +835,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
               </div>
               <button
                 type="button"
-                onClick={() => setIsEntryModalOpen(false)}
+                onClick={closeEntryModal}
                 className="rounded-full border border-white/10 p-2 text-sand/70 transition hover:border-white/25 hover:text-white"
                 aria-label="Close entry modal"
               >
@@ -840,10 +948,10 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="notes" className="block text-sm font-semibold text-sand">
-                  Notes
-                </label>
+                <div className="space-y-2">
+                  <label htmlFor="notes" className="block text-sm font-semibold text-sand">
+                    Notes
+                  </label>
                 <textarea
                   id="notes"
                   rows={4}
@@ -851,7 +959,36 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                   onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                   className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
                   placeholder="Add job notes, site details, or anything important about the day."
+                  />
+                </div>
+
+              <div className="space-y-2">
+                <label htmlFor="attachments" className="block text-sm font-semibold text-sand">
+                  Attachments
+                </label>
+                <input
+                  id="attachments"
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  onChange={(event) => setAttachmentFiles(Array.from(event.target.files || []))}
+                  className="block w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-sand/70 file:mr-4 file:rounded-full file:border-0 file:bg-ember file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                 />
+                <p className="text-xs text-sand/55">You can attach images, PDFs, spreadsheets, or documents.</p>
+                {attachmentFiles.length ? (
+                  <div className="space-y-2 rounded-[1rem] border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sand/55">
+                      Selected files
+                    </p>
+                    <ul className="space-y-1 text-sm text-white">
+                      {attachmentFiles.map((file) => (
+                        <li key={`${file.name}-${file.size}`} className="truncate">
+                          {file.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
 
               {error ? <p className="text-sm text-rose-300">{error}</p> : null}
@@ -865,12 +1002,12 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                   Clear form
                 </button>
                 <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => setIsEntryModalOpen(false)}
-                    className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-sand/80 transition hover:border-white/30 hover:text-white"
-                  >
-                    Cancel
+                <button
+                  type="button"
+                  onClick={closeEntryModal}
+                  className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-sand/80 transition hover:border-white/30 hover:text-white"
+                >
+                  Cancel
                   </button>
                   <button
                     type="submit"
@@ -884,6 +1021,52 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
             </form>
           </div>
         </div>
+      ) : null}
+
+      {attachmentsViewer ? (
+        <EntryAttachmentsModal
+          title={attachmentsViewer.title}
+          subtitle={attachmentsViewer.subtitle}
+          attachments={attachmentsViewer.attachments}
+          onClose={() => setAttachmentsViewer(null)}
+        />
+      ) : null}
+
+      {detailsViewer ? (
+        <EntryDetailsModal
+          title={detailsViewer.location}
+          subtitle={formatLongDate(detailsViewer.workDate)}
+          statusLabel={getStatusLabel(detailsViewer.status)}
+          statusTone={
+            detailsViewer.status === "INVOICED" ? "emerald" : detailsViewer.status === "APPROVED" ? "sky" : "amber"
+          }
+          attachmentsCount={detailsViewer.attachmentsCount}
+          details={[
+            { label: "Company", value: detailsViewer.company || "Triple M Electric" },
+            { label: "Date", value: formatLongDate(detailsViewer.workDate) },
+            { label: "Time", value: `${toTimeInput(detailsViewer.startTime)} - ${toTimeInput(detailsViewer.endTime)}` },
+            { label: "Break", value: `${detailsViewer.breakMinutes} min` },
+            { label: "Total hours", value: `${detailsViewer.totalHours.toFixed(2)} h` },
+            {
+              label: "Rate",
+              value:
+                detailsViewer.hourlyRate && (detailsViewer.status === "APPROVED" || detailsViewer.status === "INVOICED")
+                  ? `$${detailsViewer.hourlyRate.toFixed(2)}/h`
+                  : "Not set"
+            }
+          ]}
+          notes={detailsViewer.notes}
+          onViewAttachments={
+            detailsViewer.attachmentsCount > 0
+              ? () => {
+                  const currentEntry = detailsViewer;
+                  closeDetails();
+                  void openAttachments(currentEntry);
+                }
+              : undefined
+          }
+          onClose={closeDetails}
+        />
       ) : null}
     </div>
   );

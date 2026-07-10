@@ -4,8 +4,10 @@ import { ArrowRight, BarChart3, BriefcaseBusiness, CalendarDays, CheckCircle2, C
 import { AdminRecordsPanel } from "@/components/admin-records-panel";
 import { AdminInviteForm } from "@/components/admin-invite-form";
 import { AdminPayrollPanel } from "@/components/admin-payroll-panel";
+import { AdminOverviewRecords } from "@/components/admin-overview-records";
 import { AdminUserManager } from "@/components/admin-user-manager";
 import { EmployeeHoursPanel } from "@/components/employee-hours-panel";
+import { EmployeeOverviewSegments } from "@/components/employee-overview-segments";
 import { getOrCreatePayrollEmailSettings } from "@/lib/admin/payroll";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -22,6 +24,7 @@ type DashboardEntry = {
   notes: string | null;
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
   hourlyRate: number | null;
+  attachmentsCount: number;
 };
 
 function toDateKey(date: Date) {
@@ -125,7 +128,7 @@ function getActiveView(role: "ADMIN" | "EMPLOYEE", view?: string) {
 export default async function PanelPage({
   searchParams
 }: {
-  searchParams: Promise<{ view?: string; start?: string; end?: string; employee?: string; status?: string }>;
+  searchParams: Promise<{ view?: string; start?: string; end?: string; employee?: string; status?: string; entry?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
@@ -174,6 +177,13 @@ export default async function PanelPage({
       : [];
   const workEntries = await db.workEntry.findMany({
     where: { userId: user.id },
+    include: {
+      attachments: {
+        select: {
+          id: true
+        }
+      }
+    },
     orderBy: [{ workDate: "desc" }, { startTime: "asc" }]
   });
   const serializedWorkEntries = workEntries.map((entry) => ({
@@ -187,7 +197,8 @@ export default async function PanelPage({
     company: entry.company,
     notes: entry.notes,
     status: entry.status,
-    hourlyRate: entry.hourlyRate ? Number(entry.hourlyRate) : null
+    hourlyRate: entry.hourlyRate ? Number(entry.hourlyRate) : null,
+    attachmentsCount: entry.attachments.length
   }));
   const currentDate = new Date();
   const defaultWeekStart = getWeekStart(currentDate);
@@ -293,6 +304,11 @@ export default async function PanelPage({
             }
           },
           include: {
+            attachments: {
+              select: {
+                id: true
+              }
+            },
             user: {
               select: {
                 id: true,
@@ -318,6 +334,7 @@ export default async function PanelPage({
           notes: entry.notes,
           status: entry.status,
           hourlyRate: entry.hourlyRate ? Number(entry.hourlyRate) : null,
+          attachmentsCount: entry.attachments.length,
           user: entry.user
         }))
       : [];
@@ -341,6 +358,11 @@ export default async function PanelPage({
               : {})
           },
           include: {
+            attachments: {
+              select: {
+                id: true
+              }
+            },
             user: {
               select: {
                 id: true,
@@ -367,6 +389,7 @@ export default async function PanelPage({
           notes: entry.notes,
           status: entry.status,
           hourlyRate: entry.hourlyRate ? Number(entry.hourlyRate) : null,
+          attachmentsCount: entry.attachments.length,
           user: {
             id: entry.user.id,
             fullName: entry.user.fullName,
@@ -388,6 +411,11 @@ export default async function PanelPage({
             }
           },
           include: {
+            attachments: {
+              select: {
+                id: true
+              }
+            },
             user: {
               select: {
                 id: true,
@@ -416,6 +444,7 @@ export default async function PanelPage({
             rate,
             amount: totalHours * rate,
             status: entry.status,
+            attachmentsCount: entry.attachments.length,
             user: {
               id: entry.user.id,
               fullName: entry.user.fullName,
@@ -703,58 +732,7 @@ export default async function PanelPage({
                   </div>
                 </article>
 
-                <article className="rounded-[1.75rem] border border-white/10 bg-black/20 p-6 md:p-8">
-                  <div className="flex items-center gap-3">
-                    <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-ember text-white">
-                      <BriefcaseBusiness size={20} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Recent activity</p>
-                      <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold text-white">Latest records</h3>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 space-y-3">
-                    {serializedAdminOverviewEntries.slice(0, 6).map((entry) => {
-                      const paidAmount = getEntryPaidAmount(entry);
-
-                      return (
-                        <article key={entry.id} className="rounded-[1.25rem] border border-white/10 bg-[#08101c] p-4">
-                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                            <div className="min-w-0">
-                              <p className="text-base font-bold text-white">{entry.user.fullName}</p>
-                              <p className="mt-1 text-sm text-sand/60">
-                                {entry.location} · {formatFullDate(new Date(`${entry.workDate.slice(0, 10)}T00:00:00Z`))}
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 md:justify-end">
-                              {paidAmount ? (
-                                <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-100">
-                                  {formatCurrency(paidAmount)}
-                                </span>
-                              ) : null}
-                              <span className="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white">
-                                {entry.totalHours.toFixed(2)} h
-                              </span>
-                              <span
-                                className={`rounded-full border px-3 py-1.5 text-sm ${
-                                  entry.status === "INVOICED"
-                                    ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-                                    : entry.status === "APPROVED"
-                                      ? "border-sky-300/25 bg-sky-300/10 text-sky-100"
-                                      : "border-amber-300/20 bg-amber-300/10 text-amber-200"
-                                }`}
-                              >
-                                {entry.status === "INVOICED" ? "Invoiced" : entry.status === "APPROVED" ? "Approved" : "In progress"}
-                              </span>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </article>
+                <AdminOverviewRecords entries={serializedAdminOverviewEntries.slice(0, 6)} />
               </section>
             </>
           ) : (
@@ -956,72 +934,7 @@ export default async function PanelPage({
               </div>
             </article>
 
-            <article className="rounded-[1.75rem] border border-white/10 bg-black/20 p-6 md:p-8">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Recent activity</p>
-                  <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold text-white">This week&apos;s segments</h3>
-                </div>
-                <Link
-                  href="/panel?view=hours"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-sand/80 transition hover:border-white/25 hover:text-white"
-                >
-                  Open hours
-                  <ArrowRight size={16} />
-                </Link>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                {recentSegments.length ? (
-                  recentSegments.map((entry) => {
-                    const paidAmount = getEntryPaidAmount(entry);
-
-                    return (
-                    <article key={entry.id} className="rounded-[1.25rem] border border-white/10 bg-[#08101c] p-4">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="min-w-0">
-                          <p className="text-base font-bold text-white">{entry.location}</p>
-                          <p className="mt-1 text-sm text-sand/60">{formatFullDate(new Date(`${entry.workDate.slice(0, 10)}T00:00:00Z`))}</p>
-                          <p className="mt-3 text-sm leading-relaxed text-sand/72">
-                            {entry.notes?.trim() || "No notes added for this segment."}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 md:max-w-[14rem] md:justify-end">
-                          {paidAmount ? (
-                            <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-100">
-                              ${paidAmount.toFixed(2)}
-                            </span>
-                          ) : null}
-                          <span className="rounded-full border border-white/10 px-3 py-1.5 text-sm text-white">
-                            {entry.totalHours.toFixed(2)} h
-                          </span>
-                          <span
-                            className={`rounded-full border px-3 py-1.5 text-sm ${
-                              entry.status === "INVOICED"
-                                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-                                : "border-amber-300/20 bg-amber-300/10 text-amber-200"
-                            }`}
-                          >
-                            {entry.status === "INVOICED" ? "Invoiced" : "In progress"}
-                          </span>
-                          {entry.status === "INVOICED" && entry.hourlyRate ? (
-                            <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-100">
-                              ${entry.hourlyRate.toFixed(2)}/h
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </article>
-                    );
-                  })
-                ) : (
-                  <div className="rounded-[1.25rem] border border-dashed border-white/10 bg-white/[0.02] p-5 text-sm text-sand/65">
-                    Start adding work segments in the Hours tab and this week summary will fill in automatically.
-                  </div>
-                )}
-              </div>
-            </article>
+            <EmployeeOverviewSegments entries={recentSegments} openHoursHref="/panel?view=hours" />
           </section>
             </>
           )}
@@ -1085,6 +998,7 @@ export default async function PanelPage({
           }}
           currentWeekHref={currentWeekHref}
           periodLabel={recordPeriodLabel}
+          focusEntryId={params.entry || null}
         />
       ) : null}
 

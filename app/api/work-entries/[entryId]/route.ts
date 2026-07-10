@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { WorkEntryStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getCurrentUserFromSession } from "@/lib/auth/session";
+import { getPublicBaseUrl } from "@/lib/admin/users";
 import { calculateHours, parseDateInput, parseTimeForDate } from "@/lib/work-entries";
+import { deleteAttachmentFromR2, prepareAttachmentFile, uploadPreparedAttachmentToR2 } from "@/lib/r2";
+import { sendWorkEntryChangeToAdmins } from "@/lib/admin/work-entry-notifications";
 
 type WorkEntryPayload = {
   workDate?: string;
@@ -15,6 +18,23 @@ type WorkEntryPayload = {
   status?: string;
   hourlyRate?: number | string | null;
 };
+
+async function parseEntryRequest(request: Request) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const payload = JSON.parse(String(formData.get("payload") || "{}")) as WorkEntryPayload;
+    const attachments = formData
+      .getAll("attachments")
+      .filter((value): value is File => value instanceof File && value.size > 0);
+
+    return { payload, attachments };
+  }
+
+  const payload = (await request.json()) as WorkEntryPayload;
+  return { payload, attachments: [] as File[] };
+}
 
 function parseWorkEntryStatus(value?: string) {
   if (!value) {
@@ -35,7 +55,15 @@ function parseWorkEntryStatus(value?: string) {
 async function getAccessibleEntry(entryId: string, userId: string, role: "EMPLOYEE" | "ADMIN") {
   if (role === "ADMIN") {
     return db.workEntry.findUnique({
-      where: { id: entryId }
+      where: { id: entryId },
+      include: {
+        user: {
+          select: {
+            fullName: true,
+            username: true
+          }
+        }
+      }
     });
   }
 
@@ -43,6 +71,14 @@ async function getAccessibleEntry(entryId: string, userId: string, role: "EMPLOY
     where: {
       id: entryId,
       userId
+    },
+    include: {
+      user: {
+        select: {
+          fullName: true,
+          username: true
+        }
+      }
     }
   });
 }
@@ -69,7 +105,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
       );
     }
 
-    const body = (await request.json()) as WorkEntryPayload;
+    const { payload: body, attachments } = await parseEntryRequest(request);
     const workDateInput = String(body.workDate || "");
     const location = String(body.location || "").trim();
     const startTimeInput = String(body.startTime || "");
@@ -132,7 +168,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
       return NextResponse.json({ ok: false, error: "End time must be later than start time." }, { status: 400 });
     }
 
-    await db.workEntry.update({
+    const updatedEntry = await db.workEntry.update({
       where: { id: entryId },
       data: {
         workDate,
@@ -151,8 +187,53 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
       }
     });
 
+    const preparedAttachments = attachments.length ? await Promise.all(attachments.map((file) => prepareAttachmentFile(file))) : [];
+
+    if (preparedAttachments.length) {
+      const uploadedAttachments = await Promise.all(
+        preparedAttachments.map((attachment) => uploadPreparedAttachmentToR2({ entryId, attachment }))
+      );
+
+      await db.workEntryAttachment.createMany({
+        data: uploadedAttachments.map((attachment) => ({
+          workEntryId: entryId,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          storageKey: attachment.storageKey
+        }))
+      });
+    }
+
+    void sendWorkEntryChangeToAdmins({
+      baseUrl: getPublicBaseUrl(request),
+      entry: {
+        id: updatedEntry.id,
+        workDate: updatedEntry.workDate.toISOString(),
+        location: updatedEntry.location,
+        startTime: updatedEntry.startTime?.toISOString() || null,
+        endTime: updatedEntry.endTime?.toISOString() || null,
+        breakMinutes: updatedEntry.breakMinutes,
+        totalHours: Number(updatedEntry.totalHours),
+        company: updatedEntry.company,
+        notes: updatedEntry.notes,
+        status: updatedEntry.status,
+        hourlyRate: updatedEntry.hourlyRate ? Number(updatedEntry.hourlyRate) : null,
+        user: {
+          fullName: entry.user.fullName,
+          username: entry.user.username
+        }
+      },
+      actorName: user.fullName,
+      action: "updated",
+      attachments: preparedAttachments
+    }).catch((error) => {
+      console.error("work-entries notification error:", error);
+    });
+
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("work-entries PUT error:", error);
     return NextResponse.json({ ok: false, error: "Unable to update the work entry right now." }, { status: 500 });
   }
 }
@@ -179,12 +260,20 @@ export async function DELETE(_: Request, context: { params: Promise<{ entryId: s
       );
     }
 
+    const attachments = await db.workEntryAttachment.findMany({
+      where: { workEntryId: entryId },
+      select: { storageKey: true }
+    });
+
+    await Promise.all(attachments.map((attachment) => deleteAttachmentFromR2(attachment.storageKey)));
+
     await db.workEntry.delete({
       where: { id: entryId }
     });
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("work-entries DELETE error:", error);
     return NextResponse.json({ ok: false, error: "Unable to delete the work entry right now." }, { status: 500 });
   }
 }
