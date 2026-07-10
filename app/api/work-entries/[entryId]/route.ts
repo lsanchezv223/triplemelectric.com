@@ -9,6 +9,7 @@ import { sendWorkEntryChangeToAdmins } from "@/lib/admin/work-entry-notification
 
 type WorkEntryPayload = {
   workDate?: string;
+  clientName?: string;
   location?: string;
   startTime?: string;
   endTime?: string;
@@ -107,6 +108,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
 
     const { payload: body, attachments } = await parseEntryRequest(request);
     const workDateInput = String(body.workDate || "");
+    const clientName = String(body.clientName || "").trim();
     const location = String(body.location || "").trim();
     const startTimeInput = String(body.startTime || "");
     const endTimeInput = String(body.endTime || "");
@@ -172,6 +174,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
       where: { id: entryId },
       data: {
         workDate,
+        clientName: clientName || null,
         location,
         startTime,
         endTime,
@@ -210,6 +213,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
       entry: {
         id: updatedEntry.id,
         workDate: updatedEntry.workDate.toISOString(),
+        clientName: updatedEntry.clientName,
         location: updatedEntry.location,
         startTime: updatedEntry.startTime?.toISOString() || null,
         endTime: updatedEntry.endTime?.toISOString() || null,

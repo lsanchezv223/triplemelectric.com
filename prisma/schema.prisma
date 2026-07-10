@@ -58,6 +58,7 @@ model WorkEntry {
   id           String   @id @default(cuid())
   userId       String
   workDate     DateTime @db.Date
+  clientName   String?  @db.VarChar(160)
   location     String   @db.VarChar(160)
   startTime    DateTime?
   endTime      DateTime?

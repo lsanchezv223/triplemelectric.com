@@ -9,6 +9,7 @@ import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/en
 type Entry = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   startTime: string | null;
   endTime: string | null;
@@ -29,6 +30,7 @@ type Props = {
 type EntryFormState = {
   id: string | null;
   workDate: string;
+  clientName: string;
   location: string;
   startTime: string;
   endTime: string;
@@ -67,6 +69,7 @@ function buildInitialForm(selectedDate: string): EntryFormState {
   return {
     id: null,
     workDate: selectedDate,
+    clientName: "",
     location: "",
     startTime: "",
     endTime: "",
@@ -435,6 +438,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     setForm({
       id: entry.id,
       workDate: entry.workDate.slice(0, 10),
+      clientName: entry.clientName || "",
       location: entry.location,
       startTime: toTimeInput(entry.startTime),
       endTime: toTimeInput(entry.endTime),
@@ -501,6 +505,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     try {
       const payload = {
         workDate: form.workDate,
+        clientName: form.clientName,
         location: form.location,
         startTime: form.startTime,
         endTime: form.endTime,
@@ -710,6 +715,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-lg font-bold text-white">{entry.location}</p>
+                        {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                         <p className="mt-1 text-sm text-sand/60">{entry.company || "No company set"}</p>
                       </div>
 
@@ -844,7 +850,20 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
             </div>
 
             <form onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto px-6 py-6 md:px-8">
-              <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+              <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+                <div className="space-y-2">
+                  <label htmlFor="client-name" className="block text-sm font-semibold text-sand">
+                    Client name
+                  </label>
+                  <input
+                    id="client-name"
+                    value={form.clientName}
+                    onChange={(event) => setForm((current) => ({ ...current, clientName: event.target.value }))}
+                    className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                    placeholder="Client name"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <label htmlFor="location" className="block text-sm font-semibold text-sand">
                     Location
@@ -859,7 +878,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <label htmlFor="company" className="block text-sm font-semibold text-sand">
                     Company
                   </label>
@@ -1042,6 +1061,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
           }
           attachmentsCount={detailsViewer.attachmentsCount}
           details={[
+            { label: "Client", value: detailsViewer.clientName || "Not set" },
             { label: "Company", value: detailsViewer.company || "Triple M Electric" },
             { label: "Date", value: formatLongDate(detailsViewer.workDate) },
             { label: "Time", value: `${toTimeInput(detailsViewer.startTime)} - ${toTimeInput(detailsViewer.endTime)}` },

@@ -5,6 +5,7 @@ import type { PreparedAttachmentFile } from "@/lib/r2";
 type WorkEntryNotification = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   startTime: string | null;
   endTime: string | null;
@@ -87,6 +88,7 @@ export async function sendWorkEntryNotificationEmail({
     `${actorName} ${action === "created" ? "added" : "updated"} a work entry for ${dateLabel}.`,
     "",
     `Employee: ${entry.user.fullName} (@${entry.user.username})`,
+    `Client: ${entry.clientName || "-"}`,
     `Location: ${entry.location}`,
     `Company: ${entry.company || "Triple M Electric"}`,
     `Start time: ${formatTime(entry.startTime)}`,
@@ -161,6 +163,7 @@ export async function sendWorkEntryNotificationEmail({
               <div><strong style="color:#ffffff;">Employee:</strong> ${escapeHtml(entry.user.fullName)} (@${escapeHtml(
     entry.user.username
   )})</div>
+              <div><strong style="color:#ffffff;">Client:</strong> ${escapeHtml(entry.clientName || "-")}</div>
               <div><strong style="color:#ffffff;">Company:</strong> ${escapeHtml(entry.company || "Triple M Electric")}</div>
               <div><strong style="color:#ffffff;">Date:</strong> ${escapeHtml(dateLabel)}</div>
               <div><strong style="color:#ffffff;">Link:</strong> <a href="${entryLink}" style="color:#fbbf24;text-decoration:none;">Open in app</a></div>

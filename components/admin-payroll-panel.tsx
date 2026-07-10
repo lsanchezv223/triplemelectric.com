@@ -9,6 +9,7 @@ import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/en
 type PayrollEntry = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   company: string | null;
   totalHours: number;
@@ -422,6 +423,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                         <p className="text-sm font-semibold text-white">
                           {formatShortDate(entry.workDate)} · {entry.location}
                         </p>
+                        {entry.clientName ? <p className="text-xs text-sand/70">Client: {entry.clientName}</p> : null}
                         <p className="text-xs text-sand/55">{entry.company || "Triple M Electric"}</p>
                       </div>
 
@@ -487,6 +489,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           attachmentsCount={detailsViewer.attachmentsCount}
           details={[
             { label: "Employee", value: `${detailsViewer.user.fullName} (@${detailsViewer.user.username})` },
+            { label: "Client", value: detailsViewer.clientName || "Not set" },
             { label: "Company", value: detailsViewer.company || "Triple M Electric" },
             { label: "Date", value: formatDateField(detailsViewer.workDate) },
             { label: "Total hours", value: `${detailsViewer.totalHours.toFixed(2)} h` },

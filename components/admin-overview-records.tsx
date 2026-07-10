@@ -8,6 +8,7 @@ import { EntryDetailsModal } from "@/components/entry-details-modal";
 type OverviewRecord = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   startTime: string | null;
   endTime: string | null;
@@ -122,6 +123,7 @@ export function AdminOverviewRecords({ entries }: { entries: OverviewRecord[] })
                       <p className="mt-1 text-sm text-sand/60">
                         {entry.location} · {formatFullDate(new Date(`${entry.workDate.slice(0, 10)}T00:00:00Z`))}
                       </p>
+                      {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                       <p className="mt-3 text-sm leading-relaxed text-sand/72">
                         {getNotePreview(entry.notes) || "No notes added for this record."}
                       </p>
@@ -196,6 +198,7 @@ export function AdminOverviewRecords({ entries }: { entries: OverviewRecord[] })
           attachmentsCount={detailsViewer.attachmentsCount}
           details={[
             { label: "Employee", value: `${detailsViewer.user.fullName} (@${detailsViewer.user.username})` },
+            { label: "Client", value: detailsViewer.clientName || "Not set" },
             { label: "Company", value: detailsViewer.company || "Triple M Electric" },
             { label: "Date", value: formatFullDate(new Date(`${detailsViewer.workDate.slice(0, 10)}T00:00:00Z`)) },
             { label: "Time", value: `${toTimeLabel(detailsViewer.startTime)} - ${toTimeLabel(detailsViewer.endTime)}` },

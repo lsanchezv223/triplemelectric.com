@@ -9,6 +9,7 @@ import { EntryDetailsModal } from "@/components/entry-details-modal";
 type Segment = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   startTime: string | null;
   endTime: string | null;
@@ -133,6 +134,7 @@ export function EmployeeOverviewSegments({ entries, openHoursHref }: { entries: 
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0">
                       <p className="text-base font-bold text-white">{entry.location}</p>
+                      {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                       <p className="mt-1 text-sm text-sand/60">{formatFullDate(new Date(`${entry.workDate.slice(0, 10)}T00:00:00Z`))}</p>
                       <p className="mt-3 text-sm leading-relaxed text-sand/72">
                         {getNotePreview(entry.notes) || "No notes added for this segment."}
@@ -202,6 +204,7 @@ export function EmployeeOverviewSegments({ entries, openHoursHref }: { entries: 
           statusTone={detailsViewer.status === "INVOICED" ? "emerald" : "amber"}
           attachmentsCount={detailsViewer.attachmentsCount}
           details={[
+            { label: "Client", value: detailsViewer.clientName || "Not set" },
             { label: "Company", value: detailsViewer.company || "Triple M Electric" },
             { label: "Date", value: formatFullDate(new Date(`${detailsViewer.workDate.slice(0, 10)}T00:00:00Z`)) },
             { label: "Time", value: `${toTimeLabel(detailsViewer.startTime)} - ${toTimeLabel(detailsViewer.endTime)}` },

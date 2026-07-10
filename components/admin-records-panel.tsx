@@ -16,6 +16,7 @@ type TeamUser = {
 type AdminWorkEntry = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   startTime: string | null;
   endTime: string | null;
@@ -37,11 +38,14 @@ type AdminWorkEntry = {
 type Props = {
   entries: AdminWorkEntry[];
   users: TeamUser[];
+  currentAdminId: string;
+  currentAdminName: string;
   filters: {
     start: string;
     end: string;
     employee: string;
     status: string;
+    q: string;
   };
   currentWeekHref: string;
   periodLabel: string;
@@ -51,7 +55,9 @@ type Props = {
 type EntryFormState = {
   id: string;
   workDate: string;
+  clientName: string;
   location: string;
+  userId: string;
   startTime: string;
   endTime: string;
   breakMinutes: string;
@@ -96,7 +102,9 @@ function buildForm(entry: AdminWorkEntry): EntryFormState {
   return {
     id: entry.id,
     workDate: entry.workDate.slice(0, 10),
+    clientName: entry.clientName || "",
     location: entry.location,
+    userId: entry.user.id,
     startTime: toTimeInput(entry.startTime),
     endTime: toTimeInput(entry.endTime),
     breakMinutes: String(entry.breakMinutes),
@@ -107,11 +115,21 @@ function buildForm(entry: AdminWorkEntry): EntryFormState {
   };
 }
 
-export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, periodLabel, focusEntryId }: Props) {
+export function AdminRecordsPanel({
+  entries,
+  users,
+  currentAdminId,
+  currentAdminName,
+  filters,
+  currentWeekHref,
+  periodLabel,
+  focusEntryId
+}: Props) {
   const router = useRouter();
   const [selectedAction, setSelectedAction] = useState<{ kind: "edit" | "approve"; entryId: string } | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [success, setSuccess] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(Boolean(filters.start || filters.end || filters.employee || filters.status));
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(filters.start || filters.end || filters.employee || filters.status || filters.q));
   const [attachmentsError, setAttachmentsError] = useState("");
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [attachmentsViewer, setAttachmentsViewer] = useState<{
@@ -121,20 +139,21 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
   } | null>(null);
   const [detailsViewer, setDetailsViewer] = useState<AdminWorkEntry | null>(null);
   const [focusHandled, setFocusHandled] = useState(false);
+  const createDefaultWorkDate = new Date().toISOString().slice(0, 10);
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedAction?.entryId) ?? null,
     [entries, selectedAction]
   );
-  const activeFilterCount = [filters.start, filters.end, filters.employee, filters.status].filter(Boolean).length;
+  const activeFilterCount = [filters.start, filters.end, filters.employee, filters.status, filters.q].filter(Boolean).length;
   const totalHours = entries.reduce((sum, entry) => sum + entry.totalHours, 0);
   const totalEarned = entries.reduce((sum, entry) => sum + (getEntryPaidAmount(entry) || 0), 0);
   const invoicedCount = entries.filter((entry) => entry.status === "INVOICED").length;
   const uniqueEmployees = new Set(entries.map((entry) => entry.user.id)).size;
 
   useEffect(() => {
-    setFiltersOpen(Boolean(filters.start || filters.end || filters.employee || filters.status));
-  }, [filters.start, filters.end, filters.employee, filters.status]);
+    setFiltersOpen(Boolean(filters.start || filters.end || filters.employee || filters.status || filters.q));
+  }, [filters.start, filters.end, filters.employee, filters.status, filters.q]);
 
   useEffect(() => {
     if (!focusEntryId || focusHandled || selectedAction) {
@@ -186,6 +205,12 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
     setDetailsViewer(null);
   }
 
+  function openCreateRecord() {
+    setAttachmentsError("");
+    setSuccess("");
+    setIsCreateOpen(true);
+  }
+
   return (
     <>
       <section className="rounded-[1.75rem] border border-white/10 bg-black/20 p-6 md:p-8">
@@ -217,6 +242,14 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
+                onClick={openCreateRecord}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:border-emerald-300/40 hover:text-white"
+              >
+                Add record
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setFiltersOpen((current) => !current)}
                 className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-sand/85 transition hover:border-white/30 hover:text-white"
               >
@@ -235,8 +268,22 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
 
           {filtersOpen ? (
             <div className="mt-4 space-y-4">
-              <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,180px)_auto]">
+              <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,180px)_auto]">
                 <input type="hidden" name="view" value="records" />
+
+                <div className="space-y-2 md:col-span-2 xl:col-span-6">
+                  <label htmlFor="records-search" className="block text-sm font-semibold text-sand">
+                    Search
+                  </label>
+                  <input
+                    id="records-search"
+                    name="q"
+                    type="search"
+                    defaultValue={filters.q}
+                    placeholder="Search client, notes, location, company, or employee..."
+                    className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                  />
+                </div>
 
                 <div className="space-y-2">
                   <label htmlFor="records-start" className="block text-sm font-semibold text-sand">
@@ -353,6 +400,7 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
                     <div className="space-y-3">
                       <div>
                         <p className="text-lg font-bold text-white">{entry.location}</p>
+                        {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                         <p className="mt-1 text-sm text-sand/65">
                           {entry.user.fullName} · @{entry.user.username}
                         </p>
@@ -464,6 +512,20 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
         )
       ) : null}
 
+      {isCreateOpen ? (
+          <CreateRecordModal
+            users={users}
+            currentAdminId={currentAdminId}
+            currentAdminName={currentAdminName}
+            defaultWorkDate={createDefaultWorkDate}
+            onClose={() => setIsCreateOpen(false)}
+            onRefresh={(message) => {
+            setSuccess(message);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
       {attachmentsViewer ? (
         <EntryAttachmentsModal
           title={attachmentsViewer.title}
@@ -490,6 +552,7 @@ export function AdminRecordsPanel({ entries, users, filters, currentWeekHref, pe
           attachmentsCount={detailsViewer.attachmentsCount}
           details={[
             { label: "Employee", value: `${detailsViewer.user.fullName} (@${detailsViewer.user.username})` },
+            { label: "Client", value: detailsViewer.clientName || "Not set" },
             { label: "Company", value: detailsViewer.company || "Triple M Electric" },
             { label: "Date", value: formatLongDate(detailsViewer.workDate) },
             { label: "Time", value: `${toTimeInput(detailsViewer.startTime)} - ${toTimeInput(detailsViewer.endTime)}` },
@@ -561,6 +624,7 @@ function ApproveRecordModal({
         },
         body: JSON.stringify({
           workDate: entry.workDate.slice(0, 10),
+          clientName: entry.clientName || "",
           location: entry.location,
           startTime: entry.startTime?.slice(11, 16) || "",
           endTime: entry.endTime?.slice(11, 16) || "",
@@ -716,6 +780,7 @@ function EditRecordModal({
         },
           body: JSON.stringify({
             workDate: form.workDate,
+            clientName: form.clientName,
             location: form.location,
             startTime: form.startTime,
             endTime: form.endTime,
@@ -826,7 +891,20 @@ function EditRecordModal({
               </div>
             </div>
 
-          <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+            <div className="space-y-2">
+              <label htmlFor="admin-client-name" className="block text-sm font-semibold text-sand">
+                Client name
+              </label>
+              <input
+                id="admin-client-name"
+                value={form.clientName}
+                onChange={(event) => setForm((current) => ({ ...current, clientName: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                placeholder="Client name"
+              />
+            </div>
+
             <div className="space-y-2">
               <label htmlFor="admin-location" className="block text-sm font-semibold text-sand">
                 Location
@@ -840,7 +918,7 @@ function EditRecordModal({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label htmlFor="admin-company" className="block text-sm font-semibold text-sand">
                 Company
               </label>
@@ -958,6 +1036,349 @@ function EditRecordModal({
                 {isSaving ? "Saving..." : "Save changes"}
               </button>
             </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function buildCreateForm(users: TeamUser[], defaultWorkDate: string, currentAdminId: string): EntryFormState {
+  return {
+    id: "",
+    workDate: defaultWorkDate,
+    clientName: "",
+    location: "",
+    userId: currentAdminId || users[0]?.id || "",
+    startTime: "",
+    endTime: "",
+    breakMinutes: "0",
+    company: "Triple M Electric",
+    notes: "",
+    status: "IN_PROGRESS",
+    hourlyRate: ""
+  };
+}
+
+function CreateRecordModal({
+  users,
+  currentAdminId,
+  currentAdminName,
+  defaultWorkDate,
+  onClose,
+  onRefresh
+}: {
+  users: TeamUser[];
+  currentAdminId: string;
+  currentAdminName: string;
+  defaultWorkDate: string;
+  onClose: () => void;
+  onRefresh: (message: string) => void;
+}) {
+  const [form, setForm] = useState<EntryFormState>(() => buildCreateForm(users, defaultWorkDate, currentAdminId));
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  async function handleSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSaving(true);
+
+    try {
+      const body = new FormData();
+      body.append(
+        "payload",
+        JSON.stringify({
+          userId: form.userId,
+          workDate: form.workDate,
+          clientName: form.clientName,
+          location: form.location,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          breakMinutes: Number(form.breakMinutes || 0),
+          company: form.company,
+          notes: form.notes,
+          status: form.status,
+          hourlyRate: form.status === "IN_PROGRESS" ? null : form.hourlyRate
+        })
+      );
+      attachmentFiles.forEach((file) => body.append("attachments", file));
+
+      const response = await fetch("/api/work-entries", {
+        method: "POST",
+        body
+      });
+
+      const result = (await response.json()) as { ok?: boolean; error?: string };
+
+      if (!response.ok || !result.ok) {
+        setError(result.error || "Unable to save the record.");
+        return;
+      }
+
+      onClose();
+      onRefresh("Record created successfully.");
+    } catch {
+      setError("Unable to save the record.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
+      <div className="w-full max-w-3xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">New record</p>
+            <h3 className="mt-2 font-[var(--font-display)] text-2xl font-bold text-white">Create a work entry</h3>
+            <p className="mt-2 text-sm text-sand/65">Add a record for any active employee.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/10 p-2 text-sand/70 transition hover:border-white/25 hover:text-white"
+            aria-label="Close modal"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-5 px-6 py-6 md:px-8">
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+            <div className="space-y-2">
+              <label htmlFor="create-user" className="block text-sm font-semibold text-sand">
+                Employee
+              </label>
+              <select
+                id="create-user"
+                value={form.userId}
+                onChange={(event) => setForm((current) => ({ ...current, userId: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-[#08101c] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                required
+              >
+                <option value="">Select employee</option>
+                <option value={currentAdminId}>{currentAdminName} (Admin)</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="create-work-date" className="block text-sm font-semibold text-sand">
+                Date
+              </label>
+              <input
+                id="create-work-date"
+                type="date"
+                value={form.workDate}
+                onChange={(event) => setForm((current) => ({ ...current, workDate: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+            <div className="space-y-2">
+              <label htmlFor="create-client-name" className="block text-sm font-semibold text-sand">
+                Client name
+              </label>
+              <input
+                id="create-client-name"
+                value={form.clientName}
+                onChange={(event) => setForm((current) => ({ ...current, clientName: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                placeholder="Client name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="create-location" className="block text-sm font-semibold text-sand">
+                Location
+              </label>
+              <input
+                id="create-location"
+                value={form.location}
+                onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                placeholder="Job site or address"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
+            <div className="space-y-2">
+              <label htmlFor="create-company" className="block text-sm font-semibold text-sand">
+                Company
+              </label>
+              <input
+                id="create-company"
+                value={form.company}
+                onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="create-status" className="block text-sm font-semibold text-sand">
+                Status
+              </label>
+              <select
+                id="create-status"
+                value={form.status}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    status: event.target.value as "IN_PROGRESS" | "APPROVED" | "INVOICED",
+                    hourlyRate: event.target.value === "IN_PROGRESS" ? "" : current.hourlyRate
+                  }))
+                }
+                className="w-full rounded-2xl border border-white/15 bg-[#08101c] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+              >
+                <option value="IN_PROGRESS">In process</option>
+                <option value="APPROVED">Approved</option>
+                <option value="INVOICED">Invoiced</option>
+              </select>
+            </div>
+          </div>
+
+          {form.status !== "IN_PROGRESS" ? (
+            <div className="space-y-2">
+              <label htmlFor="create-hourly-rate" className="block text-sm font-semibold text-sand">
+                Hourly rate
+              </label>
+              <input
+                id="create-hourly-rate"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.hourlyRate}
+                onChange={(event) => setForm((current) => ({ ...current, hourlyRate: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                required
+              />
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <label htmlFor="create-start-time" className="block text-sm font-semibold text-sand">
+                Start time
+              </label>
+              <input
+                id="create-start-time"
+                type="time"
+                value={form.startTime}
+                onChange={(event) => setForm((current) => ({ ...current, startTime: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="create-end-time" className="block text-sm font-semibold text-sand">
+                End time
+              </label>
+              <input
+                id="create-end-time"
+                type="time"
+                value={form.endTime}
+                onChange={(event) => setForm((current) => ({ ...current, endTime: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="create-break-minutes" className="block text-sm font-semibold text-sand">
+                Break (min)
+              </label>
+              <input
+                id="create-break-minutes"
+                type="number"
+                min="0"
+                max="600"
+                value={form.breakMinutes}
+                onChange={(event) => setForm((current) => ({ ...current, breakMinutes: event.target.value }))}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="create-notes" className="block text-sm font-semibold text-sand">
+              Notes
+            </label>
+            <textarea
+              id="create-notes"
+              rows={4}
+              value={form.notes}
+              onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+              className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="create-attachments" className="block text-sm font-semibold text-sand">
+              Attachments
+            </label>
+            <input
+              id="create-attachments"
+              type="file"
+              multiple
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+              onChange={(event) => setAttachmentFiles(Array.from(event.target.files || []))}
+              className="block w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-sand/70 file:mr-4 file:rounded-full file:border-0 file:bg-ember file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+            />
+            <p className="text-xs text-sand/55">You can attach images, PDFs, spreadsheets, or documents.</p>
+            {attachmentFiles.length ? (
+              <div className="space-y-2 rounded-[1rem] border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sand/55">Selected files</p>
+                <ul className="space-y-1 text-sm text-white">
+                  {attachmentFiles.map((file) => (
+                    <li key={`${file.name}-${file.size}`} className="truncate">
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+
+          {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+
+          <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/15 px-4 py-2.5 text-sm font-semibold text-sand/80 transition hover:border-white/30 hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="rounded-full bg-ember px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSaving ? "Saving..." : "Create record"}
+            </button>
           </div>
         </form>
       </div>

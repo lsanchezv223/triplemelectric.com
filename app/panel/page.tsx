@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 type DashboardEntry = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   startTime: string | null;
   endTime: string | null;
@@ -128,7 +129,7 @@ function getActiveView(role: "ADMIN" | "EMPLOYEE", view?: string) {
 export default async function PanelPage({
   searchParams
 }: {
-  searchParams: Promise<{ view?: string; start?: string; end?: string; employee?: string; status?: string; entry?: string }>;
+  searchParams: Promise<{ view?: string; start?: string; end?: string; employee?: string; status?: string; entry?: string; q?: string }>;
 }) {
   const user = await requireUser();
   const params = await searchParams;
@@ -189,6 +190,7 @@ export default async function PanelPage({
   const serializedWorkEntries = workEntries.map((entry) => ({
     id: entry.id,
     workDate: entry.workDate.toISOString(),
+    clientName: entry.clientName,
     location: entry.location,
     startTime: entry.startTime?.toISOString() || null,
     endTime: entry.endTime?.toISOString() || null,
@@ -279,9 +281,24 @@ export default async function PanelPage({
         ];
   const employeeFilter = user.role === "ADMIN" && params.employee ? params.employee : "";
   const statusFilter = parseStatusFilter(params.status);
+  const recordSearch = user.role === "ADMIN" && params.q ? params.q.trim() : "";
   const recordFilterStart = parseRangeDate(params.start);
   const recordFilterEnd = parseRangeDate(params.end);
-  const hasRecordFilters = Boolean(params.start || params.end || params.employee || params.status);
+  const hasRecordFilters = Boolean(params.start || params.end || params.employee || params.status || recordSearch);
+  const recordSearchUserIds =
+    user.role === "ADMIN" && recordSearch
+      ? (
+          await db.user.findMany({
+            where: {
+              OR: [
+                { fullName: { contains: recordSearch, mode: "insensitive" } },
+                { username: { contains: recordSearch, mode: "insensitive" } }
+              ]
+            },
+            select: { id: true }
+          })
+        ).map((teamUser) => teamUser.id)
+      : [];
   const recordRangeStart =
     recordFilterStart && recordFilterEnd
       ? recordFilterStart <= recordFilterEnd
@@ -325,6 +342,7 @@ export default async function PanelPage({
       ? adminOverviewEntries.map((entry) => ({
           id: entry.id,
           workDate: entry.workDate.toISOString(),
+          clientName: entry.clientName,
           location: entry.location,
           startTime: entry.startTime?.toISOString() || null,
           endTime: entry.endTime?.toISOString() || null,
@@ -348,6 +366,17 @@ export default async function PanelPage({
             ...(hasRecordFilters ? {} : { status: WorkEntryStatus.IN_PROGRESS }),
             ...(employeeFilter ? { userId: employeeFilter } : {}),
             ...(statusFilter ? { status: statusFilter } : {}),
+            ...(recordSearch
+              ? {
+                  OR: [
+                    { location: { contains: recordSearch, mode: "insensitive" } },
+                    { clientName: { contains: recordSearch, mode: "insensitive" } },
+                    { company: { contains: recordSearch, mode: "insensitive" } },
+                    { notes: { contains: recordSearch, mode: "insensitive" } },
+                    ...(recordSearchUserIds.length ? [{ userId: { in: recordSearchUserIds } }] : [])
+                  ]
+                }
+              : {}),
             ...(recordRangeStart || recordRangeEnd
               ? {
                   workDate: {
@@ -380,6 +409,7 @@ export default async function PanelPage({
       ? adminRecordEntries.map((entry) => ({
           id: entry.id,
           workDate: entry.workDate.toISOString(),
+          clientName: entry.clientName,
           location: entry.location,
           startTime: entry.startTime?.toISOString() || null,
           endTime: entry.endTime?.toISOString() || null,
@@ -438,6 +468,7 @@ export default async function PanelPage({
           return {
             id: entry.id,
             workDate: entry.workDate.toISOString(),
+            clientName: entry.clientName,
             location: entry.location,
             company: entry.company,
             totalHours,
@@ -990,11 +1021,14 @@ export default async function PanelPage({
         <AdminRecordsPanel
           entries={serializedAdminRecordEntries}
           users={availableEmployees}
+          currentAdminId={user.id}
+          currentAdminName={user.fullName}
           filters={{
             start: params.start || "",
             end: params.end || "",
             employee: employeeFilter,
-            status: statusFilter
+            status: statusFilter,
+            q: recordSearch
           }}
           currentWeekHref={currentWeekHref}
           periodLabel={recordPeriodLabel}

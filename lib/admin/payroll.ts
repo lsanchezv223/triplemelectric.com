@@ -14,6 +14,7 @@ export type PayrollEmailSettings = {
 export type PayrollEntrySummary = {
   id: string;
   workDate: string;
+  clientName: string | null;
   location: string;
   company: string | null;
   totalHours: number;
@@ -219,6 +220,7 @@ export async function buildPayrollReportSummary(startDate: Date, endDate: Date) 
       acc[key].entries.push({
         id: entry.id,
         workDate: entry.workDate.toISOString(),
+        clientName: entry.clientName,
         location: entry.location,
         company: entry.company,
         totalHours: hours,

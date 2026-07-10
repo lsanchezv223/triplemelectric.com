@@ -8,7 +8,9 @@ import { prepareAttachmentFile, uploadPreparedAttachmentToR2 } from "@/lib/r2";
 import { sendWorkEntryChangeToAdmins } from "@/lib/admin/work-entry-notifications";
 
 type WorkEntryPayload = {
+  userId?: string;
   workDate?: string;
+  clientName?: string;
   location?: string;
   startTime?: string;
   endTime?: string;
@@ -61,7 +63,29 @@ export async function POST(request: Request) {
 
   try {
     const { payload: body, attachments } = await parseEntryRequest(request);
+    const targetUserId = user.role === "ADMIN" && body.userId ? String(body.userId) : user.id;
+    const targetUser =
+      targetUserId === user.id
+        ? user
+        : await db.user.findFirst({
+            where: {
+              id: targetUserId,
+              isActive: true
+            },
+            select: {
+              id: true,
+              fullName: true,
+              username: true,
+              role: true
+            }
+          });
+
+    if (!targetUser) {
+      return NextResponse.json({ ok: false, error: "Select a valid employee." }, { status: 400 });
+    }
+
     const workDateInput = String(body.workDate || "");
+    const clientName = String(body.clientName || "").trim();
     const location = String(body.location || "").trim();
     const startTimeInput = String(body.startTime || "");
     const endTimeInput = String(body.endTime || "");
@@ -119,8 +143,9 @@ export async function POST(request: Request) {
 
     const entry = await db.workEntry.create({
       data: {
-        userId: user.id,
+        userId: targetUser.id,
         workDate,
+        clientName: clientName || null,
         location,
         startTime,
         endTime,
@@ -160,6 +185,7 @@ export async function POST(request: Request) {
       entry: {
         id: entry.id,
         workDate: entry.workDate.toISOString(),
+        clientName: clientName || null,
         location,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
@@ -173,8 +199,8 @@ export async function POST(request: Request) {
             ? hourlyRate
             : null,
         user: {
-          fullName: user.fullName,
-          username: user.username
+          fullName: targetUser.fullName,
+          username: targetUser.username
         }
       },
       actorName: user.fullName,
