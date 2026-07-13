@@ -7,6 +7,7 @@ import { EntryDetailsModal } from "@/components/entry-details-modal";
 
 type OverviewRecord = {
   id: string;
+  sharedGroupId: string | null;
   workDate: string;
   clientName: string | null;
   location: string;
@@ -123,6 +124,11 @@ export function AdminOverviewRecords({ entries }: { entries: OverviewRecord[] })
                       <p className="mt-1 text-sm text-sand/60">
                         {entry.location} · {formatFullDate(new Date(`${entry.workDate.slice(0, 10)}T00:00:00Z`))}
                       </p>
+                      {entry.sharedGroupId ? (
+                        <span className="mt-2 inline-flex rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-100">
+                          Shared task
+                        </span>
+                      ) : null}
                       {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                       <p className="mt-3 text-sm leading-relaxed text-sand/72">
                         {getNotePreview(entry.notes) || "No notes added for this record."}

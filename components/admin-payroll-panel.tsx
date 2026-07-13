@@ -8,7 +8,10 @@ import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/en
 
 type PayrollEntry = {
   id: string;
+  sharedGroupId: string | null;
   workDate: string;
+  startTime: string | null;
+  endTime: string | null;
   clientName: string | null;
   location: string;
   company: string | null;
@@ -76,6 +79,27 @@ function formatDateField(value: string) {
     year: "numeric",
     timeZone: "UTC"
   }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
+}
+
+function formatTimeField(value: string | null) {
+  if (!value) {
+    return "--:--";
+  }
+
+  return new Intl.DateTimeFormat("en-CA", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC"
+  }).format(new Date(value));
+}
+
+function formatDateWithTimeRange(workDate: string, startTime: string | null, endTime: string | null) {
+  const dateLabel = formatDateField(workDate);
+  const startLabel = formatTimeField(startTime);
+  const endLabel = formatTimeField(endTime);
+
+  return `${dateLabel} · ${startLabel} - ${endLabel}`;
 }
 
 function getNotePreview(notes: string | null) {
@@ -548,7 +572,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
             { label: "Employee", value: `${detailsViewer.user.fullName} (@${detailsViewer.user.username})` },
             { label: "Client", value: detailsViewer.clientName || "Not set" },
             { label: "Company", value: detailsViewer.company || "Triple M Electric" },
-            { label: "Date", value: formatDateField(detailsViewer.workDate) },
+            { label: "Date", value: formatDateWithTimeRange(detailsViewer.workDate, detailsViewer.startTime, detailsViewer.endTime) },
             { label: "Total hours", value: `${detailsViewer.totalHours.toFixed(2)} h` },
             { label: "Rate", value: `$${detailsViewer.rate.toFixed(2)}/h` },
             { label: "Amount", value: formatCurrency(detailsViewer.amount) },
@@ -775,6 +799,11 @@ function PayrollPreviewModal({
                         <p className="truncate font-semibold text-white">
                           {formatShortDate(entry.workDate)} · {entry.location}
                         </p>
+                        {entry.sharedGroupId ? (
+                          <span className="mt-2 inline-flex rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-100">
+                            Shared task
+                          </span>
+                        ) : null}
                         <p className="text-sm text-sand/55">
                           {entry.company || "Triple M Electric"} · {entry.user.fullName}
                         </p>

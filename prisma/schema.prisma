@@ -57,6 +57,7 @@ model Invitation {
 model WorkEntry {
   id           String   @id @default(cuid())
   userId       String
+  sharedGroupId String?  @db.VarChar(64)
   workDate     DateTime @db.Date
   clientName   String?  @db.VarChar(160)
   location     String   @db.VarChar(160)
@@ -74,6 +75,7 @@ model WorkEntry {
   attachments  WorkEntryAttachment[]
 
   @@index([userId, workDate])
+  @@index([sharedGroupId])
   @@map("work_entries")
 }
 
@@ -81,7 +83,7 @@ model WorkEntryAttachment {
   id            String   @id @default(cuid())
   workEntryId   String
   fileName      String   @db.VarChar(255)
-  storageKey    String   @unique @db.VarChar(512)
+  storageKey    String   @db.VarChar(512)
   mimeType      String   @db.VarChar(120)
   sizeBytes     Int
   createdAt     DateTime @default(now())

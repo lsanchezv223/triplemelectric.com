@@ -15,6 +15,7 @@ type TeamUser = {
 
 type AdminWorkEntry = {
   id: string;
+  sharedGroupId: string | null;
   workDate: string;
   clientName: string | null;
   location: string;
@@ -65,6 +66,7 @@ type EntryFormState = {
   notes: string;
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
   hourlyRate: string;
+  sharedWithUserIds: string[];
 };
 
 function toTimeInput(value: string | null) {
@@ -111,7 +113,8 @@ function buildForm(entry: AdminWorkEntry): EntryFormState {
     company: entry.company || "Triple M Electric",
     notes: entry.notes || "",
     status: entry.status,
-    hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : ""
+    hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : "",
+    sharedWithUserIds: []
   };
 }
 
@@ -400,6 +403,11 @@ export function AdminRecordsPanel({
                     <div className="space-y-3">
                       <div>
                         <p className="text-lg font-bold text-white">{entry.location}</p>
+                        {entry.sharedGroupId ? (
+                          <span className="mt-2 inline-flex rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-sky-100">
+                            Shared task
+                          </span>
+                        ) : null}
                         {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                         <p className="mt-1 text-sm text-sand/65">
                           {entry.user.fullName} · @{entry.user.username}
@@ -1056,7 +1064,8 @@ function buildCreateForm(users: TeamUser[], defaultWorkDate: string, currentAdmi
     company: "Triple M Electric",
     notes: "",
     status: "IN_PROGRESS",
-    hourlyRate: ""
+    hourlyRate: "",
+    sharedWithUserIds: []
   };
 }
 
@@ -1079,6 +1088,8 @@ function CreateRecordModal({
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [showSharedWith, setShowSharedWith] = useState(false);
+  const sharedCoworkers = users.filter((user) => user.id !== form.userId);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -1102,6 +1113,7 @@ function CreateRecordModal({
         "payload",
         JSON.stringify({
           userId: form.userId,
+          sharedWithUserIds: form.sharedWithUserIds,
           workDate: form.workDate,
           clientName: form.clientName,
           location: form.location,
@@ -1137,6 +1149,15 @@ function CreateRecordModal({
     }
   }
 
+  function toggleSharedCoworker(coworkerId: string) {
+    setForm((current) => ({
+      ...current,
+      sharedWithUserIds: current.sharedWithUserIds.includes(coworkerId)
+        ? current.sharedWithUserIds.filter((id) => id !== coworkerId)
+        : [...current.sharedWithUserIds, coworkerId]
+    }));
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
       <div className="w-full max-w-3xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
@@ -1165,7 +1186,13 @@ function CreateRecordModal({
               <select
                 id="create-user"
                 value={form.userId}
-                onChange={(event) => setForm((current) => ({ ...current, userId: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    userId: event.target.value,
+                    sharedWithUserIds: current.sharedWithUserIds.filter((id) => id !== event.target.value)
+                  }))
+                }
                 className="w-full rounded-2xl border border-white/15 bg-[#08101c] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
                 required
               >
@@ -1192,6 +1219,52 @@ function CreateRecordModal({
                 required
               />
             </div>
+          </div>
+
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03]">
+            <button
+              type="button"
+              onClick={() => setShowSharedWith((current) => !current)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+            >
+              <div>
+                <p className="text-sm font-semibold text-white">Shared with coworkers</p>
+                <p className="mt-1 text-xs text-sand/55">
+                  Create copies of this record for everyone who worked on the same task.
+                </p>
+              </div>
+              <ChevronDown
+                size={18}
+                className={`text-sand/65 transition-transform ${showSharedWith ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {showSharedWith ? (
+              <div className="space-y-3 border-t border-white/10 px-4 pb-4 pt-4">
+                {sharedCoworkers.length ? (
+                  sharedCoworkers.map((coworker) => {
+                    const isSelected = form.sharedWithUserIds.includes(coworker.id);
+
+                    return (
+                      <label
+                        key={coworker.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                      >
+                        <span className="min-w-0 text-sm font-medium text-white">{coworker.fullName}</span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSharedCoworker(coworker.id)}
+                          className="h-4 w-4 rounded border-white/20 bg-white/10 text-ember focus:ring-amber-300"
+                        />
+                      </label>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-sand/60">No other active coworkers available.</p>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-4 md:grid-cols-[1fr_1fr]">

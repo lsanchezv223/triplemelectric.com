@@ -8,6 +8,7 @@ import { EntryDetailsModal } from "@/components/entry-details-modal";
 
 type Segment = {
   id: string;
+  sharedGroupId: string | null;
   workDate: string;
   clientName: string | null;
   location: string;
@@ -132,9 +133,14 @@ export function EmployeeOverviewSegments({ entries, openHoursHref }: { entries: 
               return (
                 <article key={entry.id} className="rounded-[1.25rem] border border-white/10 bg-[#08101c] p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-base font-bold text-white">{entry.location}</p>
-                      {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
+                  <div className="min-w-0">
+                    <p className="text-base font-bold text-white">{entry.location}</p>
+                    {entry.sharedGroupId ? (
+                      <span className="mt-2 inline-flex rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-100">
+                        Shared task
+                      </span>
+                    ) : null}
+                    {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                       <p className="mt-1 text-sm text-sand/60">{formatFullDate(new Date(`${entry.workDate.slice(0, 10)}T00:00:00Z`))}</p>
                       <p className="mt-3 text-sm leading-relaxed text-sand/72">
                         {getNotePreview(entry.notes) || "No notes added for this segment."}

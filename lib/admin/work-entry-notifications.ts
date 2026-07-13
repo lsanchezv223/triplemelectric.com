@@ -19,6 +19,7 @@ type WorkEntryNotification = {
     fullName: string;
     username: string;
   };
+  sharedWith?: string[];
 };
 
 function escapeHtml(value: string) {
@@ -83,11 +84,13 @@ export async function sendWorkEntryNotificationEmail({
     entry.status === "INVOICED" ? "Invoiced" : entry.status === "APPROVED" ? "Approved" : "In progress";
   const totalAmount = entry.hourlyRate ? entry.hourlyRate * entry.totalHours : null;
   const attachmentLines = attachments.map((file) => `- ${file.originalName}`).join("\n");
+  const sharedWithLabel = entry.sharedWith?.length ? entry.sharedWith.join(", ") : "";
 
   const text = [
     `${actorName} ${action === "created" ? "added" : "updated"} a work entry for ${dateLabel}.`,
     "",
     `Employee: ${entry.user.fullName} (@${entry.user.username})`,
+    sharedWithLabel ? `Shared with: ${sharedWithLabel}` : null,
     `Client: ${entry.clientName || "-"}`,
     `Location: ${entry.location}`,
     `Company: ${entry.company || "Triple M Electric"}`,
@@ -103,7 +106,7 @@ export async function sendWorkEntryNotificationEmail({
     `Open in app: ${entryLink}`,
     "",
     attachments.length ? `Attachments:\n${attachmentLines}` : "Attachments: None"
-  ].join("\n");
+  ].filter((line): line is string => Boolean(line)).join("\n");
 
   const attachmentCards = attachments.length
     ? `
@@ -156,6 +159,14 @@ export async function sendWorkEntryNotificationEmail({
                 : ""
             }
           </div>
+
+          ${
+            sharedWithLabel
+              ? `<div style="margin-bottom:18px;font-size:14px;line-height:1.7;color:#cbd5e1;"><strong style="color:#ffffff;">Shared with:</strong> ${escapeHtml(
+                  sharedWithLabel
+                )}</div>`
+              : ""
+          }
 
           <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px 20px;">
             <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fcd34d;">Details</div>

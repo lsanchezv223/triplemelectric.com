@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { WorkEntryStatus } from "@prisma/client";
 import { getCurrentUserFromSession } from "@/lib/auth/session";
@@ -9,6 +10,7 @@ import { sendWorkEntryChangeToAdmins } from "@/lib/admin/work-entry-notification
 
 type WorkEntryPayload = {
   userId?: string;
+  sharedWithUserIds?: string[];
   workDate?: string;
   clientName?: string;
   location?: string;
@@ -35,6 +37,14 @@ function parseWorkEntryStatus(value?: string) {
   }
 
   return WorkEntryStatus.IN_PROGRESS;
+}
+
+function parseUserIdList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => String(item).trim()).filter(Boolean);
 }
 
 async function parseEntryRequest(request: Request) {
@@ -64,23 +74,28 @@ export async function POST(request: Request) {
   try {
     const { payload: body, attachments } = await parseEntryRequest(request);
     const targetUserId = user.role === "ADMIN" && body.userId ? String(body.userId) : user.id;
-    const targetUser =
-      targetUserId === user.id
-        ? user
-        : await db.user.findFirst({
-            where: {
-              id: targetUserId,
-              isActive: true
-            },
-            select: {
-              id: true,
-              fullName: true,
-              username: true,
-              role: true
-            }
-          });
+    const participantIds = Array.from(
+      new Set([targetUserId, ...parseUserIdList(body.sharedWithUserIds).filter((id) => id !== targetUserId)])
+    );
+    const participants = await db.user.findMany({
+      where: {
+        id: { in: participantIds },
+        isActive: true
+      },
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        role: true
+      }
+    });
+    const participantsById = new Map(participants.map((participant) => [participant.id, participant]));
+    const orderedParticipants = participantIds
+      .map((participantId) => participantsById.get(participantId))
+      .filter(Boolean) as NonNullable<(typeof participants)[number]>[];
+    const targetUser = participantsById.get(targetUserId) || null;
 
-    if (!targetUser) {
+    if (!targetUser || orderedParticipants.length !== participantIds.length) {
       return NextResponse.json({ ok: false, error: "Select a valid employee." }, { status: 400 });
     }
 
@@ -136,55 +151,64 @@ export async function POST(request: Request) {
     }
 
     const totalHours = calculateHours(startTime, endTime, breakMinutes);
+    const sharedGroupId = orderedParticipants.length > 1 ? randomUUID() : null;
 
     if (totalHours <= 0) {
       return NextResponse.json({ ok: false, error: "End time must be later than start time." }, { status: 400 });
     }
 
-    const entry = await db.workEntry.create({
-      data: {
-        userId: targetUser.id,
-        workDate,
-        clientName: clientName || null,
-        location,
-        startTime,
-        endTime,
-        breakMinutes,
-        totalHours,
-        company: company || null,
-        notes: notes || null,
-        status: requestedStatus || WorkEntryStatus.IN_PROGRESS,
-        hourlyRate:
-          requestedStatus === WorkEntryStatus.APPROVED || requestedStatus === WorkEntryStatus.INVOICED
-            ? hourlyRate
-            : null
-      }
-    });
+    const createdEntries = await db.$transaction(
+      orderedParticipants.map((participant) =>
+        db.workEntry.create({
+          data: {
+            userId: participant.id,
+            sharedGroupId,
+            workDate,
+            clientName: clientName || null,
+            location,
+            startTime,
+            endTime,
+            breakMinutes,
+            totalHours,
+            company: company || null,
+            notes: notes || null,
+            status: requestedStatus || WorkEntryStatus.IN_PROGRESS,
+            hourlyRate:
+              requestedStatus === WorkEntryStatus.APPROVED || requestedStatus === WorkEntryStatus.INVOICED
+                ? hourlyRate
+                : null
+          }
+        })
+      )
+    );
 
     const preparedAttachments = attachments.length ? await Promise.all(attachments.map((file) => prepareAttachmentFile(file))) : [];
 
     if (preparedAttachments.length) {
       const uploadedAttachments = await Promise.all(
-        preparedAttachments.map((attachment) => uploadPreparedAttachmentToR2({ entryId: entry.id, attachment }))
+        preparedAttachments.map((attachment) => uploadPreparedAttachmentToR2({ entryId: createdEntries[0].id, attachment }))
       );
 
-      await db.workEntryAttachment.createMany({
-        data: uploadedAttachments.map((attachment) => ({
-          workEntryId: entry.id,
-          fileName: attachment.fileName,
-          mimeType: attachment.mimeType,
-          sizeBytes: attachment.sizeBytes,
-          storageKey: attachment.storageKey
-        }))
-      });
-
+      await db.$transaction(
+        createdEntries.map((createdEntry) =>
+          db.workEntryAttachment.createMany({
+            data: uploadedAttachments.map((attachment) => ({
+              workEntryId: createdEntry.id,
+              fileName: attachment.fileName,
+              mimeType: attachment.mimeType,
+              sizeBytes: attachment.sizeBytes,
+              storageKey: attachment.storageKey
+            }))
+          })
+        )
+      );
     }
 
     void sendWorkEntryChangeToAdmins({
       baseUrl: getPublicBaseUrl(request),
       entry: {
-        id: entry.id,
-        workDate: entry.workDate.toISOString(),
+        id: createdEntries[0].id,
+        workDate: createdEntries[0].workDate.toISOString(),
         clientName: clientName || null,
         location,
         startTime: startTime.toISOString(),
@@ -201,7 +225,13 @@ export async function POST(request: Request) {
         user: {
           fullName: targetUser.fullName,
           username: targetUser.username
-        }
+        },
+        sharedWith:
+          orderedParticipants.length > 1
+            ? orderedParticipants
+                .filter((participant) => participant.id !== targetUser.id)
+                .map((participant) => participant.fullName)
+            : []
       },
       actorName: user.fullName,
       action: "created",
@@ -210,7 +240,7 @@ export async function POST(request: Request) {
       console.error("work-entries notification error:", error);
     });
 
-    return NextResponse.json({ ok: true, entryId: entry.id });
+    return NextResponse.json({ ok: true, entryId: createdEntries[0].id, sharedGroupId });
   } catch (error) {
     console.error("work-entries POST error:", error);
     return NextResponse.json({ ok: false, error: "Unable to save the work entry right now." }, { status: 500 });

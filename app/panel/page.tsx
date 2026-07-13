@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 
 type DashboardEntry = {
   id: string;
+  sharedGroupId: string | null;
   workDate: string;
   clientName: string | null;
   location: string;
@@ -176,6 +177,27 @@ export default async function PanelPage({
             hourlyRate: teamUser.hourlyRate ? Number(teamUser.hourlyRate) : null
           }))
       : [];
+  const sharedTeamMembers =
+    user.role === "ADMIN"
+      ? availableEmployees
+      : (
+          await db.user.findMany({
+            where: {
+              isActive: true
+            },
+            select: {
+              id: true,
+              fullName: true,
+              role: true,
+              hourlyRate: true
+            }
+          })
+        ).map((teamUser) => ({
+          id: teamUser.id,
+          fullName: teamUser.fullName,
+          role: teamUser.role,
+          hourlyRate: teamUser.hourlyRate ? Number(teamUser.hourlyRate) : null
+        }));
   const workEntries = await db.workEntry.findMany({
     where: { userId: user.id },
     include: {
@@ -189,6 +211,7 @@ export default async function PanelPage({
   });
   const serializedWorkEntries = workEntries.map((entry) => ({
     id: entry.id,
+    sharedGroupId: entry.sharedGroupId,
     workDate: entry.workDate.toISOString(),
     clientName: entry.clientName,
     location: entry.location,
@@ -341,6 +364,7 @@ export default async function PanelPage({
     user.role === "ADMIN"
       ? adminOverviewEntries.map((entry) => ({
           id: entry.id,
+          sharedGroupId: entry.sharedGroupId,
           workDate: entry.workDate.toISOString(),
           clientName: entry.clientName,
           location: entry.location,
@@ -408,6 +432,7 @@ export default async function PanelPage({
     user.role === "ADMIN"
       ? adminRecordEntries.map((entry) => ({
           id: entry.id,
+          sharedGroupId: entry.sharedGroupId,
           workDate: entry.workDate.toISOString(),
           clientName: entry.clientName,
           location: entry.location,
@@ -467,7 +492,10 @@ export default async function PanelPage({
 
           return {
             id: entry.id,
+            sharedGroupId: entry.sharedGroupId,
             workDate: entry.workDate.toISOString(),
+            startTime: entry.startTime?.toISOString() || null,
+            endTime: entry.endTime?.toISOString() || null,
             clientName: entry.clientName,
             location: entry.location,
             company: entry.company,
@@ -1038,7 +1066,7 @@ export default async function PanelPage({
       ) : null}
 
       {activeView === "hours" ? (
-              <EmployeeHoursPanel entries={serializedWorkEntries} currentUserRole={user.role} />
+              <EmployeeHoursPanel entries={serializedWorkEntries} currentUserRole={user.role} coworkers={sharedTeamMembers.filter((member) => member.id !== user.id)} currentUserId={user.id} />
       ) : null}
     </div>
   );

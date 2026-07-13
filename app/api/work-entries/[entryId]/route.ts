@@ -269,7 +269,22 @@ export async function DELETE(_: Request, context: { params: Promise<{ entryId: s
       select: { storageKey: true }
     });
 
-    await Promise.all(attachments.map((attachment) => deleteAttachmentFromR2(attachment.storageKey)));
+    await Promise.all(
+      attachments.map(async (attachment) => {
+        const remainingReferences = await db.workEntryAttachment.count({
+          where: {
+            storageKey: attachment.storageKey,
+            workEntryId: {
+              not: entryId
+            }
+          }
+        });
+
+        if (!remainingReferences) {
+          await deleteAttachmentFromR2(attachment.storageKey);
+        }
+      })
+    );
 
     await db.workEntry.delete({
       where: { id: entryId }

@@ -8,6 +8,7 @@ import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/en
 
 type Entry = {
   id: string;
+  sharedGroupId: string | null;
   workDate: string;
   clientName: string | null;
   location: string;
@@ -22,9 +23,16 @@ type Entry = {
   attachmentsCount: number;
 };
 
+type Coworker = {
+  id: string;
+  fullName: string;
+};
+
 type Props = {
   entries: Entry[];
   currentUserRole: "ADMIN" | "EMPLOYEE";
+  currentUserId: string;
+  coworkers: Coworker[];
 };
 
 type EntryFormState = {
@@ -39,6 +47,7 @@ type EntryFormState = {
   notes: string;
   status: "IN_PROGRESS" | "APPROVED" | "INVOICED";
   hourlyRate: string;
+  sharedWithUserIds: string[];
 };
 
 function formatLongDate(value: string) {
@@ -81,7 +90,8 @@ function buildInitialForm(selectedDate: string): EntryFormState {
     company: "Triple M Electric",
     notes: "",
     status: "IN_PROGRESS",
-    hourlyRate: ""
+    hourlyRate: "",
+    sharedWithUserIds: []
   };
 }
 
@@ -369,7 +379,7 @@ function TimePickerField({
   );
 }
 
-export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
+export function EmployeeHoursPanel({ entries, currentUserRole, currentUserId, coworkers }: Props) {
   const router = useRouter();
   const todayKey = toDateKey(new Date());
   const [selectedDate, setSelectedDate] = useState(todayKey);
@@ -393,6 +403,8 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
   } | null>(null);
   const [detailsViewer, setDetailsViewer] = useState<Entry | null>(null);
   const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+  const [showSharedWith, setShowSharedWith] = useState(false);
+  const sharedCoworkers = coworkers.filter((coworker) => coworker.id !== currentUserId);
 
   useEffect(() => {
     if (!isEntryModalOpen) {
@@ -421,6 +433,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     setForm(buildInitialForm(dateKey));
     setAttachmentFiles([]);
     setShowOptionalDetails(false);
+    setShowSharedWith(false);
   }
 
   function openNewEntryModal() {
@@ -429,6 +442,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     setSuccess("");
     setAttachmentFiles([]);
     setShowOptionalDetails(false);
+    setShowSharedWith(false);
     setIsEntryModalOpen(true);
   }
 
@@ -461,12 +475,14 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
       company: entry.company || "Triple M Electric",
       notes: entry.notes || "",
       status: entry.status,
-      hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : ""
+      hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : "",
+      sharedWithUserIds: []
     });
     setError("");
     setSuccess("");
     setAttachmentFiles([]);
     setShowOptionalDetails(false);
+    setShowSharedWith(false);
     setIsEntryModalOpen(true);
   }
 
@@ -508,6 +524,19 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
     setDetailsViewer(entry);
   }
 
+  function toggleSharedCoworker(coworkerId: string) {
+    setForm((current) => {
+      const nextShared = current.sharedWithUserIds.includes(coworkerId)
+        ? current.sharedWithUserIds.filter((id) => id !== coworkerId)
+        : [...current.sharedWithUserIds, coworkerId];
+
+      return {
+        ...current,
+        sharedWithUserIds: nextShared
+      };
+    });
+  }
+
   function closeDetails() {
     setDetailsViewer(null);
   }
@@ -528,6 +557,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
         breakMinutes: Number(form.breakMinutes || 0),
         company: form.company,
         notes: form.notes,
+        sharedWithUserIds: form.sharedWithUserIds,
         ...(currentUserRole === "ADMIN"
           ? {
               status: form.status,
@@ -731,6 +761,11 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-lg font-bold text-white">{entry.location}</p>
+                        {entry.sharedGroupId ? (
+                          <span className="mt-2 inline-flex rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-sky-100">
+                            Shared task
+                          </span>
+                        ) : null}
                         {entry.clientName ? <p className="mt-1 text-sm text-sand/75">Client: {entry.clientName}</p> : null}
                         <p className="mt-1 text-sm text-sand/60">{entry.company || "No company set"}</p>
                       </div>
@@ -913,6 +948,52 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
                           placeholder="167 Caster"
                         />
                       </div>
+                    </div>
+
+                    <div className="rounded-[1.25rem] border border-white/10 bg-black/15">
+                      <button
+                        type="button"
+                        onClick={() => setShowSharedWith((current) => !current)}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-white">Shared with coworkers</p>
+                          <p className="mt-1 text-xs text-sand/55">
+                            Duplicate this entry for teammates who worked on the same job.
+                          </p>
+                        </div>
+                        <ChevronDown
+                          size={18}
+                          className={`text-sand/65 transition-transform ${showSharedWith ? "rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      {showSharedWith ? (
+                        <div className="space-y-3 border-t border-white/10 px-4 pb-4 pt-4">
+                          {sharedCoworkers.length ? (
+                            sharedCoworkers.map((coworker) => {
+                              const isSelected = form.sharedWithUserIds.includes(coworker.id);
+
+                              return (
+                                <label
+                                  key={coworker.id}
+                                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                                >
+                                  <span className="min-w-0 text-sm font-medium text-white">{coworker.fullName}</span>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleSharedCoworker(coworker.id)}
+                                    className="h-4 w-4 rounded border-white/20 bg-white/10 text-ember focus:ring-amber-300"
+                                  />
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <p className="text-sm text-sand/60">No other active coworkers available.</p>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
