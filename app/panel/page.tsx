@@ -471,6 +471,7 @@ export default async function PanelPage({
             clientName: entry.clientName,
             location: entry.location,
             company: entry.company,
+            notes: entry.notes,
             totalHours,
             rate,
             amount: totalHours * rate,

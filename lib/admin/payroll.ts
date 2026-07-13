@@ -172,14 +172,15 @@ export async function upsertPayrollEmailSettings({
   });
 }
 
-export async function buildPayrollReportSummary(startDate: Date, endDate: Date) {
+export async function buildPayrollReportSummary(startDate: Date, endDate: Date, entryIds?: string[]) {
   const entries = await db.workEntry.findMany({
     where: {
       status: "APPROVED",
       workDate: {
         gte: startDate,
         lte: endDate
-      }
+      },
+      ...(entryIds?.length ? { id: { in: entryIds } } : {})
     },
     include: {
       user: {
@@ -413,14 +414,16 @@ export async function sendPayrollSummaryEmail({
   startDate,
   endDate,
   toEmail,
-  ccEmails
+  ccEmails,
+  entryIds
 }: {
   startDate: Date;
   endDate: Date;
   toEmail: string;
   ccEmails: string[];
+  entryIds?: string[];
 }) {
-  const summary = await buildPayrollReportSummary(startDate, endDate);
+  const summary = await buildPayrollReportSummary(startDate, endDate, entryIds);
   const subject = `Payroll ${formatPayrollDate(summary.startDate)} - ${formatPayrollDate(summary.endDate)}`;
   const text = buildPayrollEmailText(summary);
   const html = buildPayrollEmailHtml(summary);

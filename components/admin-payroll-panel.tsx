@@ -12,6 +12,7 @@ type PayrollEntry = {
   clientName: string | null;
   location: string;
   company: string | null;
+  notes: string | null;
   totalHours: number;
   rate: number;
   amount: number;
@@ -77,6 +78,15 @@ function formatDateField(value: string) {
   }).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
 }
 
+function getNotePreview(notes: string | null) {
+  if (!notes) {
+    return "";
+  }
+
+  const compact = notes.trim().replace(/\s+/g, " ");
+  return compact.length > 120 ? `${compact.slice(0, 120).trimEnd()}…` : compact;
+}
+
 function getStatusLabel(status: PayrollEntry["status"]) {
   if (status === "APPROVED") {
     return "Approved";
@@ -123,6 +133,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
   const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isInvoicing, setIsInvoicing] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [detailsViewer, setDetailsViewer] = useState<PayrollEntry | null>(null);
   const [attachmentsViewer, setAttachmentsViewer] = useState<{
@@ -132,6 +143,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
   } | null>(null);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
   const [attachmentsError, setAttachmentsError] = useState("");
+  const [selectedEntryIds, setSelectedEntryIds] = useState<string[]>([]);
 
   const employees = useMemo(() => buildEmployees(entries), [entries]);
   const totalHours = entries.reduce((sum, entry) => sum + entry.totalHours, 0);
@@ -175,7 +187,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
     }
   }
 
-  async function sendEmail() {
+  async function sendEmail(selectedIds: string[]) {
     setError("");
     setSuccess("");
     setIsSending(true);
@@ -190,7 +202,9 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           startDate,
           endDate,
           toEmail: recipient,
-          ccEmails
+          ccEmails,
+          action: "send",
+          entryIds: selectedIds
         })
       });
 
@@ -212,6 +226,43 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
     }
   }
 
+  async function invoiceEntries(selectedIds: string[]) {
+    setError("");
+    setSuccess("");
+    setIsInvoicing(true);
+
+    try {
+      const response = await fetch("/api/admin/payroll", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          startDate,
+          endDate,
+          action: "invoice",
+          entryIds: selectedIds
+        })
+      });
+
+      const result = (await response.json()) as { ok?: boolean; error?: string };
+
+      if (!response.ok || !result.ok) {
+        setError(result.error || "Unable to update payroll status.");
+        return false;
+      }
+
+      setSuccess("Payroll entries marked as invoiced.");
+      router.refresh();
+      return true;
+    } catch {
+      setError("Unable to update payroll status.");
+      return false;
+    } finally {
+      setIsInvoicing(false);
+    }
+  }
+
   function updateRange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -224,6 +275,11 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
 
   function openDetails(entry: PayrollEntry) {
     setDetailsViewer(entry);
+  }
+
+  function openPreview() {
+    setSelectedEntryIds(entries.map((entry) => entry.id));
+    setIsPreviewOpen(true);
   }
 
   function closeDetails() {
@@ -358,7 +414,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
 
           <button
             type="button"
-            onClick={() => setIsPreviewOpen(true)}
+            onClick={openPreview}
             disabled={!entries.length}
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 py-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
           >
@@ -420,12 +476,13 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
                       className="flex flex-col gap-2 rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div>
-                        <p className="text-sm font-semibold text-white">
-                          {formatShortDate(entry.workDate)} · {entry.location}
-                        </p>
-                        {entry.clientName ? <p className="text-xs text-sand/70">Client: {entry.clientName}</p> : null}
-                        <p className="text-xs text-sand/55">{entry.company || "Triple M Electric"}</p>
-                      </div>
+                    <p className="text-sm font-semibold text-white">
+                      {formatShortDate(entry.workDate)} · {entry.location}
+                    </p>
+                    {entry.clientName ? <p className="text-xs text-sand/70">Client: {entry.clientName}</p> : null}
+                    <p className="text-xs text-sand/55">{entry.company || "Triple M Electric"}</p>
+                    {entry.notes ? <p className="mt-1 text-xs leading-relaxed text-sand/65">{getNotePreview(entry.notes)}</p> : null}
+                  </div>
 
                       <div className="flex flex-wrap gap-2">
                         <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75">
@@ -497,7 +554,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
             { label: "Amount", value: formatCurrency(detailsViewer.amount) },
             { label: "Status", value: getStatusLabel(detailsViewer.status) }
           ]}
-          notes={null}
+          notes={detailsViewer.notes}
           onViewAttachments={
             detailsViewer.attachmentsCount > 0
               ? () => {
@@ -527,13 +584,26 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           recipient={recipient}
           ccEmails={ccEmails}
           periodLabel={periodLabel}
+          selectedEntryIds={selectedEntryIds}
           isSending={isSending}
+          isInvoicing={isInvoicing}
           onClose={() => setIsPreviewOpen(false)}
           onConfirm={async () => {
-            const ok = await sendEmail();
+            const ok = await sendEmail(selectedEntryIds);
             if (ok) {
               setIsPreviewOpen(false);
             }
+          }}
+          onInvoice={async () => {
+            const ok = await invoiceEntries(selectedEntryIds);
+            if (ok) {
+              setIsPreviewOpen(false);
+            }
+          }}
+          onToggleEntry={(entryId) => {
+            setSelectedEntryIds((current) =>
+              current.includes(entryId) ? current.filter((id) => id !== entryId) : [...current, entryId]
+            );
           }}
         />
       ) : null}
@@ -557,19 +627,14 @@ function DateField({
       <label htmlFor={id} className="block text-sm font-semibold text-sand">
         {label}
       </label>
-      <div className="relative min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
-        <span className={`block min-w-0 truncate pr-8 text-sm ${value ? "text-white" : "text-sand/45"}`}>
-          {value ? formatDateField(value) : "Select date"}
-        </span>
-        <input
-          id={id}
-          name={id}
-          type="date"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="absolute inset-0 h-full w-full cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0 outline-none"
-        />
-      </div>
+      <input
+        id={id}
+        name={id}
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-w-0 w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-sand/45 focus:border-amber-300 focus:bg-white/[0.07]"
+      />
     </div>
   );
 }
@@ -580,29 +645,40 @@ function PayrollPreviewModal({
   recipient,
   ccEmails,
   periodLabel,
+  selectedEntryIds,
   isSending,
+  isInvoicing,
   onClose,
-  onConfirm
+  onConfirm,
+  onInvoice,
+  onToggleEntry
 }: {
   entries: PayrollEntry[];
   employees: PayrollEmployee[];
   recipient: string;
   ccEmails: string;
   periodLabel: string;
+  selectedEntryIds: string[];
   isSending: boolean;
+  isInvoicing: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
+  onInvoice: () => Promise<void>;
+  onToggleEntry: (entryId: string) => void;
 }) {
   const totalHours = entries.reduce((sum, entry) => sum + entry.totalHours, 0);
   const totalAmount = entries.reduce((sum, entry) => sum + entry.amount, 0);
+  const selectedEntries = entries.filter((entry) => selectedEntryIds.includes(entry.id));
+  const selectedHours = selectedEntries.reduce((sum, entry) => sum + entry.totalHours, 0);
+  const selectedAmount = selectedEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const ccList = ccEmails
     .split(/[\n,]/)
     .map((item) => item.trim())
     .filter(Boolean);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-4xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+      <div className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Preview email</p>
@@ -619,7 +695,7 @@ function PayrollPreviewModal({
           </button>
         </div>
 
-        <div className="space-y-5 px-6 py-6 md:px-8">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-6 md:px-8">
           <div className="grid gap-3 sm:grid-cols-3">
             <article className="rounded-[1.1rem] border border-white/10 bg-black/20 p-4">
               <p className="text-xs uppercase tracking-[0.14em] text-sand/50">Recipient</p>
@@ -649,33 +725,85 @@ function PayrollPreviewModal({
               <p className="mt-2 text-2xl font-bold text-white">{totalHours.toFixed(2)} h</p>
             </article>
             <article className="rounded-[1.1rem] border border-emerald-400/20 bg-emerald-400/10 p-4">
-              <p className="text-sm text-emerald-100/70">After send</p>
-              <p className="mt-2 text-2xl font-bold text-white">Approved to invoiced</p>
+              <p className="text-sm text-emerald-100/70">Status</p>
+              <p className="mt-2 text-2xl font-bold text-white">Send and invoice are separate</p>
             </article>
           </div>
 
-          <div className="space-y-3">
-            {employees.map((employee) => (
-              <article key={employee.id} className="rounded-[1.1rem] border border-white/10 bg-white/[0.03] p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-semibold text-white">{employee.fullName}</p>
-                    <p className="text-sm text-sand/55">@{employee.username}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75">
-                      {employee.hours.toFixed(2)} h
-                    </span>
-                    <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75">
-                      {formatCurrency(employee.amount)}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            ))}
+          <div className="rounded-[1.1rem] border border-sky-300/15 bg-sky-300/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-100/70">Note</p>
+            <p className="mt-2 text-sm text-sky-50/80">
+              Sending the payroll email will not change entry status. Use invoicing when you want to close the period.
+            </p>
           </div>
 
-          <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-end">
+          <div className="rounded-[1.1rem] border border-white/10 bg-black/20 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sand/50">Selected entries</p>
+                <p className="mt-2 text-sm text-sand/70">
+                  {selectedEntries.length} of {entries.length} selected
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-sand/75">
+                <span className="rounded-full border border-white/10 px-3 py-1.5">{selectedHours.toFixed(2)} h</span>
+                <span className="rounded-full border border-white/10 px-3 py-1.5">{formatCurrency(selectedAmount)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {entries.map((entry) => {
+              const isSelected = selectedEntryIds.includes(entry.id);
+
+              return (
+                <label
+                  key={entry.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-[1.1rem] border p-4 transition ${
+                    isSelected ? "border-emerald-300/30 bg-emerald-300/10" : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleEntry(entry.id)}
+                    className="mt-1 h-4 w-4 rounded border-white/30 bg-transparent text-emerald-400 focus:ring-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-white">
+                          {formatShortDate(entry.workDate)} · {entry.location}
+                        </p>
+                        <p className="text-sm text-sand/55">
+                          {entry.company || "Triple M Electric"} · {entry.user.fullName}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75">
+                          {entry.totalHours.toFixed(2)} h
+                        </span>
+                        <span className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-sand/75">
+                          {formatCurrency(entry.amount)}
+                        </span>
+                      </div>
+                    </div>
+                    {entry.notes ? (
+                      <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-sand/75">
+                        {getNotePreview(entry.notes)}
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-sm text-sand/45">No notes added.</p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-white/10 px-6 py-5 md:px-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={onClose}
@@ -685,8 +813,16 @@ function PayrollPreviewModal({
             </button>
             <button
               type="button"
+              onClick={onInvoice}
+              disabled={isInvoicing || !selectedEntries.length}
+              className="rounded-full border border-sky-300/25 px-5 py-2.5 text-sm font-bold text-sky-100 transition hover:border-sky-300/45 hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isInvoicing ? "Updating..." : "Mark as invoiced"}
+            </button>
+            <button
+              type="button"
               onClick={onConfirm}
-              disabled={isSending || !recipient}
+              disabled={isSending || !recipient || !selectedEntries.length}
               className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSending ? "Sending..." : "Send payroll email"}

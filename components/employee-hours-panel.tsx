@@ -838,8 +838,8 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
       </section>
 
       {isEntryModalOpen ? (
-        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
-          <div className="my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
+        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+          <div className="my-auto flex max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">
@@ -865,7 +865,10 @@ export function EmployeeHoursPanel({ entries, currentUserRole }: Props) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto px-6 py-6 md:px-8">
+            <form
+              onSubmit={handleSubmit}
+              className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-8"
+            >
               <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03]">
                 <button
                   type="button"
