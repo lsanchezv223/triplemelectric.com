@@ -105,8 +105,15 @@ export async function PUT(request: Request) {
         enabled: settings.enabled
       }
     });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Unable to save payroll settings right now." }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to save payroll settings right now.",
+        details: error instanceof Error ? error.message : "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -190,7 +197,14 @@ export async function POST(request: Request) {
         enabled: savedSettings.enabled
       }
     });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Unable to send the payroll email right now." }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to send the payroll email right now.",
+        details: error instanceof Error ? error.message : "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }

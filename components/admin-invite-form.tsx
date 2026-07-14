@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { readApiResponse } from "@/lib/api-response";
 
 export function AdminInviteForm() {
   const router = useRouter();
@@ -34,10 +35,12 @@ export function AdminInviteForm() {
         body: JSON.stringify(payload)
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to send the invitation.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to send the invitation.");
         return;
       }
 

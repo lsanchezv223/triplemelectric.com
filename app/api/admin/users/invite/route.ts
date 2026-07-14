@@ -120,6 +120,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: message }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: false, error: "Unable to send the invitation right now." }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to send the invitation right now.",
+        details: message || "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }

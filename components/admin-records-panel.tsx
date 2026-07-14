@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Eye, Paperclip, Pencil, ReceiptText, Trash2, X 
 import { useRouter } from "next/navigation";
 import { EntryDetailsModal } from "@/components/entry-details-modal";
 import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
+import { readApiResponse } from "@/lib/api-response";
 
 type TeamUser = {
   id: string;
@@ -177,14 +178,15 @@ export function AdminRecordsPanel({
 
     try {
       const response = await fetch(`/api/work-entries/${entry.id}/attachments`);
-      const result = (await response.json()) as {
+      const { data: result, errorMessage } = await readApiResponse<{
         ok?: boolean;
         error?: string;
+        details?: string;
         attachments?: EntryAttachmentItem[];
-      };
+      }>(response);
 
-      if (!response.ok || !result.ok) {
-        setAttachmentsError(result.error || "Unable to load attachments.");
+      if (!response.ok || !result?.ok) {
+        setAttachmentsError(errorMessage || "Unable to load attachments.");
         return;
       }
 
@@ -644,10 +646,12 @@ function ApproveRecordModal({
         })
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to approve the record.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to approve the record.");
         return;
       }
 
@@ -800,10 +804,12 @@ function EditRecordModal({
           })
         });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to update the record.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to update the record.");
         return;
       }
 
@@ -825,10 +831,12 @@ function EditRecordModal({
         method: "DELETE"
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to delete the record.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to delete the record.");
         return;
       }
 
@@ -1133,10 +1141,12 @@ function CreateRecordModal({
         body
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to save the record.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to save the record.");
         return;
       }
 

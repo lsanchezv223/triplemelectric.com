@@ -5,6 +5,7 @@ import { Eye, Mail, Send, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EntryDetailsModal } from "@/components/entry-details-modal";
 import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
+import { readApiResponse } from "@/lib/api-response";
 
 type PayrollEntry = {
   id: string;
@@ -195,10 +196,12 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
         })
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to save payroll settings.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to save payroll settings.");
         return;
       }
 
@@ -232,10 +235,12 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
         })
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to send the payroll email.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to send the payroll email.");
         return false;
       }
 
@@ -269,10 +274,12 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
         })
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to update payroll status.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to update payroll status.");
         return false;
       }
 
@@ -316,14 +323,15 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
 
     try {
       const response = await fetch(`/api/work-entries/${entry.id}/attachments`);
-      const result = (await response.json()) as {
+      const { data: result, errorMessage } = await readApiResponse<{
         ok?: boolean;
         error?: string;
+        details?: string;
         attachments?: EntryAttachmentItem[];
-      };
+      }>(response);
 
-      if (!response.ok || !result.ok) {
-        setAttachmentsError(result.error || "Unable to load attachments.");
+      if (!response.ok || !result?.ok) {
+        setAttachmentsError(errorMessage || "Unable to load attachments.");
         return;
       }
 

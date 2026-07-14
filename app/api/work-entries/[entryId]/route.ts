@@ -238,7 +238,14 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("work-entries PUT error:", error);
-    return NextResponse.json({ ok: false, error: "Unable to update the work entry right now." }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to update the work entry right now.",
+        details: error instanceof Error ? error.message : "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -293,6 +300,13 @@ export async function DELETE(_: Request, context: { params: Promise<{ entryId: s
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("work-entries DELETE error:", error);
-    return NextResponse.json({ ok: false, error: "Unable to delete the work entry right now." }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to delete the work entry right now.",
+        details: error instanceof Error ? error.message : "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }

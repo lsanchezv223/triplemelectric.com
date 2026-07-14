@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { readApiResponse } from "@/lib/api-response";
 
 type TeamUser = {
   id: string;
@@ -156,10 +157,12 @@ function EditUserModal({
         })
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to save changes.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to save changes.");
         return;
       }
 
@@ -182,10 +185,12 @@ function EditUserModal({
         method: "POST"
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to send the password link.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to send the password link.");
         return;
       }
 

@@ -107,7 +107,14 @@ export async function PUT(request: Request, context: { params: Promise<{ userId:
         hourlyRate: updated.hourlyRate ? Number(updated.hourlyRate) : null
       }
     });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Unable to update the user right now." }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to update the user right now.",
+        details: error instanceof Error ? error.message : "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Clock3, Eye, Paperclip, Pencil,
 import { useRouter } from "next/navigation";
 import { EntryDetailsModal } from "@/components/entry-details-modal";
 import { EntryAttachmentsModal, type EntryAttachmentItem } from "@/components/entry-attachments-modal";
+import { readApiResponse } from "@/lib/api-response";
 
 type Entry = {
   id: string;
@@ -497,14 +498,15 @@ export function EmployeeHoursPanel({ entries, currentUserRole, currentUserId, co
 
     try {
       const response = await fetch(`/api/work-entries/${entry.id}/attachments`);
-      const result = (await response.json()) as {
+      const { data: result, errorMessage } = await readApiResponse<{
         ok?: boolean;
         error?: string;
+        details?: string;
         attachments?: EntryAttachmentItem[];
-      };
+      }>(response);
 
-      if (!response.ok || !result.ok) {
-        setAttachmentsError(result.error || "Unable to load attachments.");
+      if (!response.ok || !result?.ok) {
+        setAttachmentsError(errorMessage || "Unable to load attachments.");
         return;
       }
 
@@ -575,10 +577,12 @@ export function EmployeeHoursPanel({ entries, currentUserRole, currentUserId, co
         body
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to save the work entry.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to save the work entry.");
         return;
       }
 
@@ -604,10 +608,12 @@ export function EmployeeHoursPanel({ entries, currentUserRole, currentUserId, co
         method: "DELETE"
       });
 
-      const result = (await response.json()) as { ok?: boolean; error?: string };
+      const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
+        response
+      );
 
-      if (!response.ok || !result.ok) {
-        setError(result.error || "Unable to delete the work entry.");
+      if (!response.ok || !result?.ok) {
+        setError(errorMessage || "Unable to delete the work entry.");
         return;
       }
 

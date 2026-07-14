@@ -243,6 +243,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, entryId: createdEntries[0].id, sharedGroupId });
   } catch (error) {
     console.error("work-entries POST error:", error);
-    return NextResponse.json({ ok: false, error: "Unable to save the work entry right now." }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to save the work entry right now.",
+        details: error instanceof Error ? error.message : "Unknown server error."
+      },
+      { status: 500 }
+    );
   }
 }
