@@ -15,6 +15,7 @@ import { db } from "@/lib/db";
 type DashboardEntry = {
   id: string;
   sharedGroupId: string | null;
+  sharedWithUserIds?: string[];
   workDate: string;
   clientName: string | null;
   location: string;
@@ -209,9 +210,35 @@ export default async function PanelPage({
     },
     orderBy: [{ workDate: "desc" }, { startTime: "asc" }]
   });
+  const sharedGroupIds = Array.from(new Set(workEntries.map((entry) => entry.sharedGroupId).filter(Boolean))) as string[];
+  const sharedGroupMembers =
+    sharedGroupIds.length > 0
+      ? await db.workEntry.findMany({
+          where: {
+            sharedGroupId: { in: sharedGroupIds }
+          },
+          select: {
+            sharedGroupId: true,
+            userId: true
+          }
+        })
+      : [];
+  const sharedGroupMembersByGroup = sharedGroupMembers.reduce<Record<string, string[]>>((acc, entry) => {
+    if (!entry.sharedGroupId || entry.userId === user.id) {
+      return acc;
+    }
+
+    acc[entry.sharedGroupId] = acc[entry.sharedGroupId] || [];
+    if (!acc[entry.sharedGroupId].includes(entry.userId)) {
+      acc[entry.sharedGroupId].push(entry.userId);
+    }
+
+    return acc;
+  }, {});
   const serializedWorkEntries = workEntries.map((entry) => ({
     id: entry.id,
     sharedGroupId: entry.sharedGroupId,
+    sharedWithUserIds: entry.sharedGroupId ? sharedGroupMembersByGroup[entry.sharedGroupId] || [] : [],
     workDate: entry.workDate.toISOString(),
     clientName: entry.clientName,
     location: entry.location,

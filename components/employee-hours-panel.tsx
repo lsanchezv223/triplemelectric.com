@@ -10,6 +10,7 @@ import { readApiResponse } from "@/lib/api-response";
 type Entry = {
   id: string;
   sharedGroupId: string | null;
+  sharedWithUserIds: string[];
   workDate: string;
   clientName: string | null;
   location: string;
@@ -94,6 +95,14 @@ function buildInitialForm(selectedDate: string): EntryFormState {
     hourlyRate: "",
     sharedWithUserIds: []
   };
+}
+
+function getSharedCoworkerIds(entry: Entry) {
+  if (!entry.sharedGroupId) {
+    return [];
+  }
+
+  return entry.sharedWithUserIds || [];
 }
 
 function getStatusLabel(status: Entry["status"]) {
@@ -477,7 +486,7 @@ export function EmployeeHoursPanel({ entries, currentUserRole, currentUserId, co
       notes: entry.notes || "",
       status: entry.status,
       hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : "",
-      sharedWithUserIds: []
+      sharedWithUserIds: getSharedCoworkerIds(entry)
     });
     setError("");
     setSuccess("");

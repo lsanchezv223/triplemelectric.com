@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { WorkEntryStatus } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -18,6 +19,7 @@ type WorkEntryPayload = {
   notes?: string;
   status?: string;
   hourlyRate?: number | string | null;
+  sharedWithUserIds?: string[];
 };
 
 async function parseEntryRequest(request: Request) {
@@ -51,6 +53,14 @@ function parseWorkEntryStatus(value?: string) {
   }
 
   return WorkEntryStatus.IN_PROGRESS;
+}
+
+function parseUserIdList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => String(item).trim()).filter(Boolean);
 }
 
 async function getAccessibleEntry(entryId: string, userId: string, role: "EMPLOYEE" | "ADMIN") {
@@ -116,6 +126,9 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
     const company = String(body.company || "").trim();
     const notes = String(body.notes || "").trim();
     const requestedStatus = parseWorkEntryStatus(body.status);
+    const desiredParticipantIds = Array.from(
+      new Set([entry.userId, ...parseUserIdList(body.sharedWithUserIds).filter((id) => id !== entry.userId)])
+    );
     const hourlyRate = body.hourlyRate === null || body.hourlyRate === undefined || body.hourlyRate === ""
       ? null
       : Number(body.hourlyRate);
@@ -170,43 +183,212 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
       return NextResponse.json({ ok: false, error: "End time must be later than start time." }, { status: 400 });
     }
 
-    const updatedEntry = await db.workEntry.update({
-      where: { id: entryId },
-      data: {
-        workDate,
-        clientName: clientName || null,
-        location,
-        startTime,
-        endTime,
-        breakMinutes,
-        totalHours,
-        company: company || null,
-        notes: notes || null,
-        status: nextStatus,
-        hourlyRate:
-          nextStatus === WorkEntryStatus.APPROVED || nextStatus === WorkEntryStatus.INVOICED
-            ? nextHourlyRate
-            : null
-      }
-    });
-
     const preparedAttachments = attachments.length ? await Promise.all(attachments.map((file) => prepareAttachmentFile(file))) : [];
+    const shouldSyncSharedGroup = desiredParticipantIds.length > 1 || Boolean(entry.sharedGroupId);
+    const groupIdToSync = entry.sharedGroupId ?? (desiredParticipantIds.length > 1 ? randomUUID() : null);
+    const nextSharedGroupId = desiredParticipantIds.length > 1 ? groupIdToSync : null;
 
-    if (preparedAttachments.length) {
-      const uploadedAttachments = await Promise.all(
-        preparedAttachments.map((attachment) => uploadPreparedAttachmentToR2({ entryId, attachment }))
-      );
+    const updatedEntry = await db.$transaction(async (tx) => {
+      const existingGroupEntries =
+        shouldSyncSharedGroup && groupIdToSync
+          ? await tx.workEntry.findMany({
+              where: { sharedGroupId: groupIdToSync },
+              select: {
+                id: true,
+                userId: true
+              }
+            })
+          : [];
+      const currentEntry = await tx.workEntry.update({
+        where: { id: entryId },
+        data: {
+          workDate,
+          clientName: clientName || null,
+          location,
+          startTime,
+          endTime,
+          breakMinutes,
+          totalHours,
+          company: company || null,
+          notes: notes || null,
+          status: nextStatus,
+          hourlyRate:
+            nextStatus === WorkEntryStatus.APPROVED || nextStatus === WorkEntryStatus.INVOICED
+              ? nextHourlyRate
+              : null,
+          sharedGroupId: nextSharedGroupId
+        },
+        include: {
+          attachments: true
+        }
+      });
+      const existingAttachmentSources = currentEntry.attachments.map((attachment) => ({
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        storageKey: attachment.storageKey
+      }));
+      let newAttachmentSources: Array<{
+        fileName: string;
+        mimeType: string;
+        sizeBytes: number;
+        storageKey: string;
+      }> = [];
 
-      await db.workEntryAttachment.createMany({
-        data: uploadedAttachments.map((attachment) => ({
-          workEntryId: entryId,
+      if (preparedAttachments.length) {
+        const uploadedAttachments = await Promise.all(
+          preparedAttachments.map((attachment) => uploadPreparedAttachmentToR2({ entryId: currentEntry.id, attachment }))
+        );
+
+        await tx.workEntryAttachment.createMany({
+          data: uploadedAttachments.map((attachment) => ({
+            workEntryId: currentEntry.id,
+            fileName: attachment.fileName,
+            mimeType: attachment.mimeType,
+            sizeBytes: attachment.sizeBytes,
+            storageKey: attachment.storageKey
+          }))
+        });
+
+        newAttachmentSources = uploadedAttachments.map((attachment) => ({
           fileName: attachment.fileName,
           mimeType: attachment.mimeType,
           sizeBytes: attachment.sizeBytes,
           storageKey: attachment.storageKey
-        }))
-      });
-    }
+        }));
+      }
+
+      const allAttachmentSources = existingAttachmentSources.concat(newAttachmentSources);
+
+      if (shouldSyncSharedGroup && groupIdToSync) {
+        const groupEntriesByUserId = new Map(existingGroupEntries.map((groupEntry) => [groupEntry.userId, groupEntry]));
+
+        if (desiredParticipantIds.length === 1) {
+          const entriesToDelete = existingGroupEntries.filter((groupEntry) => groupEntry.id !== currentEntry.id);
+
+          if (entriesToDelete.length) {
+            await tx.workEntry.deleteMany({
+              where: {
+                id: {
+                  in: entriesToDelete.map((groupEntry) => groupEntry.id)
+                }
+              }
+            });
+          }
+
+          return currentEntry;
+        }
+
+        for (const participantId of desiredParticipantIds) {
+          if (participantId === currentEntry.userId) {
+            continue;
+          }
+
+          const existingEntry = groupEntriesByUserId.get(participantId);
+
+          if (existingEntry) {
+            await tx.workEntry.update({
+              where: { id: existingEntry.id },
+              data: {
+                workDate,
+                clientName: clientName || null,
+                location,
+                startTime,
+                endTime,
+                breakMinutes,
+                totalHours,
+                company: company || null,
+                notes: notes || null,
+                status: nextStatus,
+                hourlyRate:
+                  nextStatus === WorkEntryStatus.APPROVED || nextStatus === WorkEntryStatus.INVOICED
+                    ? nextHourlyRate
+                    : null,
+                sharedGroupId: nextSharedGroupId
+              }
+            });
+
+            if (newAttachmentSources.length) {
+              await tx.workEntryAttachment.createMany({
+                data: newAttachmentSources.map((attachment) => ({
+                  workEntryId: existingEntry.id,
+                  fileName: attachment.fileName,
+                  mimeType: attachment.mimeType,
+                  sizeBytes: attachment.sizeBytes,
+                  storageKey: attachment.storageKey
+                }))
+              });
+            }
+            continue;
+          }
+
+          const clonedEntry = await tx.workEntry.create({
+            data: {
+              userId: participantId,
+              sharedGroupId: nextSharedGroupId,
+              workDate,
+              clientName: clientName || null,
+              location,
+              startTime,
+              endTime,
+              breakMinutes,
+              totalHours,
+              company: company || null,
+              notes: notes || null,
+              status: nextStatus,
+              hourlyRate:
+                nextStatus === WorkEntryStatus.APPROVED || nextStatus === WorkEntryStatus.INVOICED
+                  ? nextHourlyRate
+                  : null
+            }
+          });
+
+          if (allAttachmentSources.length) {
+            await tx.workEntryAttachment.createMany({
+              data: allAttachmentSources.map((attachment) => ({
+                workEntryId: clonedEntry.id,
+                fileName: attachment.fileName,
+                mimeType: attachment.mimeType,
+                sizeBytes: attachment.sizeBytes,
+                storageKey: attachment.storageKey
+              }))
+            });
+          }
+        }
+
+        const entriesToDelete = existingGroupEntries.filter(
+          (groupEntry) => !desiredParticipantIds.includes(groupEntry.userId) && groupEntry.id !== currentEntry.id
+        );
+
+        if (entriesToDelete.length) {
+          await tx.workEntry.deleteMany({
+            where: {
+              id: {
+                in: entriesToDelete.map((groupEntry) => groupEntry.id)
+              }
+            }
+          });
+        }
+      }
+
+      return currentEntry;
+    });
+
+    const sharedWithNames =
+      desiredParticipantIds.length > 1
+        ? (
+            await db.user.findMany({
+              where: {
+                id: {
+                  in: desiredParticipantIds.filter((participantId) => participantId !== entry.userId)
+                }
+              },
+              select: {
+                fullName: true
+              }
+            })
+          ).map((participant) => participant.fullName)
+        : [];
 
     void sendWorkEntryChangeToAdmins({
       baseUrl: getPublicBaseUrl(request),
@@ -226,7 +408,8 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
         user: {
           fullName: entry.user.fullName,
           username: entry.user.username
-        }
+        },
+        sharedWith: sharedWithNames
       },
       actorName: user.fullName,
       action: "updated",

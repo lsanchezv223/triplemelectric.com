@@ -101,7 +101,21 @@ function getNotePreview(notes: string | null) {
   return trimmed.length > 160 ? `${trimmed.slice(0, 160)}…` : trimmed;
 }
 
-function buildForm(entry: AdminWorkEntry): EntryFormState {
+function getSharedCoworkerIds(entry: AdminWorkEntry, entries: AdminWorkEntry[]) {
+  if (!entry.sharedGroupId) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      entries
+        .filter((candidate) => candidate.sharedGroupId === entry.sharedGroupId && candidate.user.id !== entry.user.id)
+        .map((candidate) => candidate.user.id)
+    )
+  );
+}
+
+function buildForm(entry: AdminWorkEntry, entries: AdminWorkEntry[]): EntryFormState {
   return {
     id: entry.id,
     workDate: entry.workDate.slice(0, 10),
@@ -115,7 +129,7 @@ function buildForm(entry: AdminWorkEntry): EntryFormState {
     notes: entry.notes || "",
     status: entry.status,
     hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : "",
-    sharedWithUserIds: []
+    sharedWithUserIds: getSharedCoworkerIds(entry, entries)
   };
 }
 
@@ -513,6 +527,7 @@ export function AdminRecordsPanel({
         ) : (
           <EditRecordModal
             entry={selectedEntry}
+            entries={entries}
             onClose={() => setSelectedAction(null)}
             onRefresh={(message) => {
               setSuccess(message);
@@ -756,17 +771,23 @@ function ApproveRecordModal({
 
 function EditRecordModal({
   entry,
+  entries,
   onClose,
   onRefresh
 }: {
   entry: AdminWorkEntry;
+  entries: AdminWorkEntry[];
   onClose: () => void;
   onRefresh: (message: string) => void;
 }) {
-  const [form, setForm] = useState<EntryFormState>(() => buildForm(entry));
+  const [form, setForm] = useState<EntryFormState>(() => buildForm(entry, entries));
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setForm(buildForm(entry, entries));
+  }, [entry, entries]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -800,7 +821,8 @@ function EditRecordModal({
             company: form.company,
             notes: form.notes,
             status: form.status,
-            hourlyRate: form.status === "IN_PROGRESS" ? null : form.hourlyRate
+            hourlyRate: form.status === "IN_PROGRESS" ? null : form.hourlyRate,
+            sharedWithUserIds: form.sharedWithUserIds
           })
         });
 
