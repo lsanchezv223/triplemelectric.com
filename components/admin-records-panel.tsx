@@ -661,8 +661,8 @@ function ApproveRecordModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+      <div className="my-auto flex max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-2xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Approve record</p>
@@ -684,7 +684,7 @@ function ApproveRecordModal({
           </button>
         </div>
 
-        <form onSubmit={handleBill} className="space-y-5 px-6 py-6 md:px-8">
+        <form onSubmit={handleBill} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-8">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-sand">Total hours</label>
@@ -842,8 +842,8 @@ function EditRecordModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+      <div className="my-auto flex max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">Record settings</p>
@@ -860,7 +860,7 @@ function EditRecordModal({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-5 px-6 py-6 md:px-8">
+        <form onSubmit={handleSave} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-8">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor="admin-work-date" className="block text-sm font-semibold text-sand">
@@ -1159,8 +1159,8 @@ function CreateRecordModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4 py-6 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
+      <div className="my-auto flex max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5 md:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">New record</p>
@@ -1177,7 +1177,7 @@ function CreateRecordModal({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-5 px-6 py-6 md:px-8">
+        <form onSubmit={handleSave} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-6 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-8">
           <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
             <div className="space-y-2">
               <label htmlFor="create-user" className="block text-sm font-semibold text-sand">
