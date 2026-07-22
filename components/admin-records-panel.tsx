@@ -784,9 +784,11 @@ function EditRecordModal({
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
 
   useEffect(() => {
     setForm(buildForm(entry, entries));
+    setAttachmentFiles([]);
   }, [entry, entries]);
 
   useEffect(() => {
@@ -806,25 +808,29 @@ function EditRecordModal({
     setIsSaving(true);
 
     try {
+      const body = new FormData();
+      body.append(
+        "payload",
+        JSON.stringify({
+          workDate: form.workDate,
+          clientName: form.clientName,
+          location: form.location,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          breakMinutes: Number(form.breakMinutes || 0),
+          company: form.company,
+          notes: form.notes,
+          status: form.status,
+          hourlyRate: form.status === "IN_PROGRESS" ? null : form.hourlyRate,
+          sharedWithUserIds: form.sharedWithUserIds
+        })
+      );
+      attachmentFiles.forEach((file) => body.append("attachments", file));
+
       const response = await fetch(`/api/work-entries/${entry.id}`, {
         method: "PUT",
-        headers: {
-          "content-type": "application/json"
-        },
-          body: JSON.stringify({
-            workDate: form.workDate,
-            clientName: form.clientName,
-            location: form.location,
-            startTime: form.startTime,
-            endTime: form.endTime,
-            breakMinutes: Number(form.breakMinutes || 0),
-            company: form.company,
-            notes: form.notes,
-            status: form.status,
-            hourlyRate: form.status === "IN_PROGRESS" ? null : form.hourlyRate,
-            sharedWithUserIds: form.sharedWithUserIds
-          })
-        });
+        body
+      });
 
       const { data: result, errorMessage } = await readApiResponse<{ ok?: boolean; error?: string; details?: string }>(
         response
@@ -1044,6 +1050,35 @@ function EditRecordModal({
               onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
               className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="admin-edit-attachments" className="block text-sm font-semibold text-sand">
+              Attachments
+            </label>
+            <input
+              id="admin-edit-attachments"
+              type="file"
+              multiple
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+              onChange={(event) => setAttachmentFiles(Array.from(event.target.files || []))}
+              className="block w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-sand/70 file:mr-4 file:rounded-full file:border-0 file:bg-ember file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+            />
+            <p className="text-xs text-sand/55">
+              New files will be added to this record{entry.sharedGroupId ? " and copied to the shared task" : ""}.
+            </p>
+            {attachmentFiles.length ? (
+              <div className="space-y-2 rounded-[1rem] border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sand/55">Selected files</p>
+                <ul className="space-y-1 text-sm text-white">
+                  {attachmentFiles.map((file) => (
+                    <li key={`${file.name}-${file.size}`} className="truncate">
+                      {file.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
           {error ? <p className="text-sm text-rose-300">{error}</p> : null}
