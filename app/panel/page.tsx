@@ -455,11 +455,44 @@ export default async function PanelPage({
           orderBy: [{ workDate: "desc" }, { startTime: "desc" }]
         })
       : [];
+  const adminRecordSharedGroupIds = Array.from(
+    new Set(adminRecordEntries.map((entry) => entry.sharedGroupId).filter(Boolean))
+  ) as string[];
+  const adminRecordSharedGroupMembers =
+    adminRecordSharedGroupIds.length > 0
+      ? await db.workEntry.findMany({
+          where: {
+            sharedGroupId: { in: adminRecordSharedGroupIds }
+          },
+          select: {
+            sharedGroupId: true,
+            userId: true
+          }
+        })
+      : [];
+  const adminRecordSharedGroupMembersByGroup = adminRecordSharedGroupMembers.reduce<Record<string, string[]>>(
+    (acc, entry) => {
+      if (!entry.sharedGroupId) {
+        return acc;
+      }
+
+      acc[entry.sharedGroupId] = acc[entry.sharedGroupId] || [];
+      if (!acc[entry.sharedGroupId].includes(entry.userId)) {
+        acc[entry.sharedGroupId].push(entry.userId);
+      }
+
+      return acc;
+    },
+    {}
+  );
   const serializedAdminRecordEntries =
     user.role === "ADMIN"
       ? adminRecordEntries.map((entry) => ({
           id: entry.id,
           sharedGroupId: entry.sharedGroupId,
+          sharedWithUserIds: entry.sharedGroupId
+            ? (adminRecordSharedGroupMembersByGroup[entry.sharedGroupId] || []).filter((userId) => userId !== entry.userId)
+            : [],
           workDate: entry.workDate.toISOString(),
           clientName: entry.clientName,
           location: entry.location,

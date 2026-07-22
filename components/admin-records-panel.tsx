@@ -17,6 +17,7 @@ type TeamUser = {
 type AdminWorkEntry = {
   id: string;
   sharedGroupId: string | null;
+  sharedWithUserIds: string[];
   workDate: string;
   clientName: string | null;
   location: string;
@@ -104,6 +105,10 @@ function getNotePreview(notes: string | null) {
 function getSharedCoworkerIds(entry: AdminWorkEntry, entries: AdminWorkEntry[]) {
   if (!entry.sharedGroupId) {
     return [];
+  }
+
+  if (entry.sharedWithUserIds?.length) {
+    return entry.sharedWithUserIds;
   }
 
   return Array.from(
@@ -528,6 +533,7 @@ export function AdminRecordsPanel({
           <EditRecordModal
             entry={selectedEntry}
             entries={entries}
+            users={users}
             onClose={() => setSelectedAction(null)}
             onRefresh={(message) => {
               setSuccess(message);
@@ -772,11 +778,13 @@ function ApproveRecordModal({
 function EditRecordModal({
   entry,
   entries,
+  users,
   onClose,
   onRefresh
 }: {
   entry: AdminWorkEntry;
   entries: AdminWorkEntry[];
+  users: TeamUser[];
   onClose: () => void;
   onRefresh: (message: string) => void;
 }) {
@@ -785,10 +793,13 @@ function EditRecordModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [showSharedWith, setShowSharedWith] = useState(false);
+  const sharedCoworkers = users.filter((user) => user.id !== entry.user.id);
 
   useEffect(() => {
     setForm(buildForm(entry, entries));
     setAttachmentFiles([]);
+    setShowSharedWith(false);
   }, [entry, entries]);
 
   useEffect(() => {
@@ -877,6 +888,15 @@ function EditRecordModal({
     }
   }
 
+  function toggleSharedCoworker(coworkerId: string) {
+    setForm((current) => ({
+      ...current,
+      sharedWithUserIds: current.sharedWithUserIds.includes(coworkerId)
+        ? current.sharedWithUserIds.filter((id) => id !== coworkerId)
+        : [...current.sharedWithUserIds, coworkerId]
+    }));
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-black/65 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6">
       <div className="my-auto flex max-h-[calc(100dvh-1rem)] min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07111f] shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-3rem)]">
@@ -934,6 +954,52 @@ function EditRecordModal({
                 </select>
               </div>
             </div>
+
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.03]">
+            <button
+              type="button"
+              onClick={() => setShowSharedWith((current) => !current)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+            >
+              <div>
+                <p className="text-sm font-semibold text-white">Shared with coworkers</p>
+                <p className="mt-1 text-xs text-sand/55">
+                  Keep this record connected to coworkers who worked on the same task.
+                </p>
+              </div>
+              <ChevronDown
+                size={18}
+                className={`text-sand/65 transition-transform ${showSharedWith ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {showSharedWith ? (
+              <div className="space-y-3 border-t border-white/10 px-4 pb-4 pt-4">
+                {sharedCoworkers.length ? (
+                  sharedCoworkers.map((coworker) => {
+                    const isSelected = form.sharedWithUserIds.includes(coworker.id);
+
+                    return (
+                      <label
+                        key={coworker.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                      >
+                        <span className="min-w-0 text-sm font-medium text-white">{coworker.fullName}</span>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSharedCoworker(coworker.id)}
+                          className="h-4 w-4 rounded border-white/20 bg-white/10 text-ember focus:ring-amber-300"
+                        />
+                      </label>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-sand/60">No other active coworkers available.</p>
+                )}
+              </div>
+            ) : null}
+          </div>
 
           <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
             <div className="space-y-2">
