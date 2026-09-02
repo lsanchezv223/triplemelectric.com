@@ -547,7 +547,10 @@ export default async function PanelPage({
   const serializedPayrollEntries =
     user.role === "ADMIN"
       ? payrollEntries.map((entry) => {
-          const rate = Number(entry.user.hourlyRate || entry.hourlyRate || 0);
+          // The rate captured on an approved/invoiced entry is the historical
+          // source of truth. The user profile rate is only a fallback for old
+          // entries that do not have one yet.
+          const rate = Number(entry.hourlyRate ?? entry.user.hourlyRate ?? 0);
           const totalHours = Number(entry.totalHours);
 
           return {

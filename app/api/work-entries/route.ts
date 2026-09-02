@@ -86,7 +86,8 @@ export async function POST(request: Request) {
         id: true,
         fullName: true,
         username: true,
-        role: true
+        role: true,
+        hourlyRate: true
       }
     });
     const participantsById = new Map(participants.map((participant) => [participant.id, participant]));
@@ -175,7 +176,12 @@ export async function POST(request: Request) {
             status: requestedStatus || WorkEntryStatus.IN_PROGRESS,
             hourlyRate:
               requestedStatus === WorkEntryStatus.APPROVED || requestedStatus === WorkEntryStatus.INVOICED
-                ? hourlyRate
+                // The selected employee may be explicitly overridden in the
+                // form. Coworkers use their own configured rate, falling back
+                // to that explicit rate only when theirs is not configured.
+                ? participant.id === targetUserId
+                  ? hourlyRate
+                  : Number(participant.hourlyRate ?? hourlyRate)
                 : null
           }
         })

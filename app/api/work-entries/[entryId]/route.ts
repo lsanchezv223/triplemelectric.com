@@ -195,10 +195,22 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
               where: { sharedGroupId: groupIdToSync },
               select: {
                 id: true,
-                userId: true
+                userId: true,
+                hourlyRate: true
               }
             })
           : [];
+      const participantRates =
+        shouldSyncSharedGroup && desiredParticipantIds.length > 1
+          ? new Map(
+              (
+                await tx.user.findMany({
+                  where: { id: { in: desiredParticipantIds } },
+                  select: { id: true, hourlyRate: true }
+                })
+              ).map((participant) => [participant.id, participant.hourlyRate])
+            )
+          : new Map<string, null>();
       const currentEntry = await tx.workEntry.update({
         where: { id: entryId },
         data: {
@@ -285,6 +297,9 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
           }
 
           const existingEntry = groupEntriesByUserId.get(participantId);
+          const participantRate = Number(
+            existingEntry?.hourlyRate ?? participantRates.get(participantId) ?? nextHourlyRate
+          );
 
           if (existingEntry) {
             await tx.workEntry.update({
@@ -302,7 +317,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
                 status: nextStatus,
                 hourlyRate:
                   nextStatus === WorkEntryStatus.APPROVED || nextStatus === WorkEntryStatus.INVOICED
-                    ? nextHourlyRate
+                    ? participantRate
                     : null,
                 sharedGroupId: nextSharedGroupId
               }
@@ -338,7 +353,7 @@ export async function PUT(request: Request, context: { params: Promise<{ entryId
               status: nextStatus,
               hourlyRate:
                 nextStatus === WorkEntryStatus.APPROVED || nextStatus === WorkEntryStatus.INVOICED
-                  ? nextHourlyRate
+                  ? participantRate
                   : null
             }
           });

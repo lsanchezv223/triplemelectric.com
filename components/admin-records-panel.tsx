@@ -610,7 +610,9 @@ export function AdminRecordsPanel({
 
 function buildBillForm(entry: AdminWorkEntry) {
   return {
-    hourlyRate: entry.user.hourlyRate ? String(entry.user.hourlyRate) : entry.hourlyRate ? String(entry.hourlyRate) : "",
+    // Do not replace an already captured historical rate with a later profile
+    // change when reopening the approval modal.
+    hourlyRate: entry.hourlyRate ? String(entry.hourlyRate) : entry.user.hourlyRate ? String(entry.user.hourlyRate) : "",
     notes: entry.notes || ""
   };
 }
