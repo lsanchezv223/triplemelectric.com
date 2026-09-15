@@ -294,7 +294,7 @@ export async function buildPayrollReportSummary(startDate: Date, endDate: Date, 
   } satisfies PayrollReportSummary;
 }
 
-export function buildPayrollEmailText(summary: PayrollReportSummary) {
+export function buildPayrollEmailText(summary: PayrollReportSummary, comment?: string) {
   const lines = [
     `Payroll summary ${formatPayrollDate(summary.startDate)} - ${formatPayrollDate(summary.endDate)}`,
     `Total employees: ${summary.employeeCount}`,
@@ -302,6 +302,10 @@ export function buildPayrollEmailText(summary: PayrollReportSummary) {
     `Total amount: $${summary.totalAmount.toFixed(2)}`,
     ""
   ];
+
+  if (comment) {
+    lines.push("Comment:", comment, "");
+  }
 
   for (const week of summary.weeks) {
     lines.push(week.label);
@@ -319,7 +323,20 @@ export function buildPayrollEmailText(summary: PayrollReportSummary) {
   return lines.join("\n");
 }
 
-export function buildPayrollEmailHtml(summary: PayrollReportSummary) {
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatHtmlMultilineText(value: string) {
+  return escapeHtml(value).replace(/\r?\n/g, "<br />");
+}
+
+export function buildPayrollEmailHtml(summary: PayrollReportSummary, comment?: string) {
   const weekBlocks = summary.weeks
     .map((week) => {
       const weekRows = week.employees
@@ -358,6 +375,15 @@ export function buildPayrollEmailHtml(summary: PayrollReportSummary) {
         <div style="text-transform:uppercase;letter-spacing:0.16em;color:#fcd34d;font-size:12px;font-weight:700;">Payroll</div>
         <h1 style="margin:12px 0 8px 0;color:#ffffff;font-size:28px;line-height:1.2;">${formatPayrollDate(summary.startDate)} - ${formatPayrollDate(summary.endDate)}</h1>
         <p style="margin:0 0 24px 0;color:#94a3b8;font-size:14px;">Weekly payroll summary for the selected period.</p>
+
+        ${
+          comment
+            ? `<div style="margin:0 0 20px 0;padding:16px;border:1px solid rgba(252,211,77,0.25);border-radius:14px;background:rgba(252,211,77,0.08);">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#fcd34d;">Comment</div>
+                <div style="margin-top:8px;font-size:14px;line-height:1.6;color:#fef3c7;">${formatHtmlMultilineText(comment)}</div>
+              </div>`
+            : ""
+        }
 
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:20px;">
           <tr>
@@ -415,18 +441,20 @@ export async function sendPayrollSummaryEmail({
   endDate,
   toEmail,
   ccEmails,
-  entryIds
+  entryIds,
+  comment
 }: {
   startDate: Date;
   endDate: Date;
   toEmail: string;
   ccEmails: string[];
   entryIds?: string[];
+  comment?: string;
 }) {
   const summary = await buildPayrollReportSummary(startDate, endDate, entryIds);
   const subject = `Payroll ${formatPayrollDate(summary.startDate)} - ${formatPayrollDate(summary.endDate)}`;
-  const text = buildPayrollEmailText(summary);
-  const html = buildPayrollEmailHtml(summary);
+  const text = buildPayrollEmailText(summary, comment);
+  const html = buildPayrollEmailHtml(summary, comment);
 
   await sendEmail({
     to: toEmail,

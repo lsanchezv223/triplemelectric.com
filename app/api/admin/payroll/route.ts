@@ -18,6 +18,7 @@ type PayrollSettingsPayload = {
   endDate?: string;
   action?: "send" | "invoice";
   entryIds?: string[];
+  comment?: string;
 };
 
 function parseDateInput(value?: string) {
@@ -43,6 +44,10 @@ function parseEntryIds(value: unknown) {
   }
 
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function normalizeEmailComment(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function validateEmails(toEmail: string | null, ccEmails: string[]) {
@@ -132,9 +137,14 @@ export async function POST(request: Request) {
     const toEmail = body.toEmail ? normalizeEmail(String(body.toEmail)) : null;
     const ccEmails = parseCcEmails(body.ccEmails);
     const entryIds = parseEntryIds(body.entryIds);
+    const comment = normalizeEmailComment(body.comment);
 
     if (!startDate || !endDate) {
       return NextResponse.json({ ok: false, error: "Select a valid date range." }, { status: 400 });
+    }
+
+    if (comment.length > 2000) {
+      return NextResponse.json({ ok: false, error: "The email comment must be 2,000 characters or fewer." }, { status: 400 });
     }
 
     const summary = await buildPayrollReportSummary(startDate, endDate, entryIds);
@@ -185,7 +195,8 @@ export async function POST(request: Request) {
       endDate,
       toEmail: savedSettings.toEmail,
       ccEmails: savedSettings.ccEmails,
-      entryIds
+      entryIds,
+      comment
     });
 
     return NextResponse.json({

@@ -154,6 +154,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
   const [rangeEnd, setRangeEnd] = useState(endDate);
   const [recipient, setRecipient] = useState(settings.toEmail || "");
   const [ccEmails, setCcEmails] = useState(settings.ccEmails.join(", "));
+  const [emailComment, setEmailComment] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -230,6 +231,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           endDate,
           toEmail: recipient,
           ccEmails,
+          comment: emailComment,
           action: "send",
           entryIds: selectedIds
         })
@@ -615,6 +617,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
           employees={employees}
           recipient={recipient}
           ccEmails={ccEmails}
+          comment={emailComment}
           periodLabel={periodLabel}
           selectedEntryIds={selectedEntryIds}
           isSending={isSending}
@@ -632,6 +635,7 @@ export function AdminPayrollPanel({ entries, settings, startDate, endDate, perio
               setIsPreviewOpen(false);
             }
           }}
+          onCommentChange={setEmailComment}
           onToggleEntry={(entryId) => {
             setSelectedEntryIds((current) =>
               current.includes(entryId) ? current.filter((id) => id !== entryId) : [...current, entryId]
@@ -676,6 +680,7 @@ function PayrollPreviewModal({
   employees,
   recipient,
   ccEmails,
+  comment,
   periodLabel,
   selectedEntryIds,
   isSending,
@@ -683,12 +688,14 @@ function PayrollPreviewModal({
   onClose,
   onConfirm,
   onInvoice,
+  onCommentChange,
   onToggleEntry
 }: {
   entries: PayrollEntry[];
   employees: PayrollEmployee[];
   recipient: string;
   ccEmails: string;
+  comment: string;
   periodLabel: string;
   selectedEntryIds: string[];
   isSending: boolean;
@@ -696,6 +703,7 @@ function PayrollPreviewModal({
   onClose: () => void;
   onConfirm: () => Promise<void>;
   onInvoice: () => Promise<void>;
+  onCommentChange: (value: string) => void;
   onToggleEntry: (entryId: string) => void;
 }) {
   const totalHours = entries.reduce((sum, entry) => sum + entry.totalHours, 0);
@@ -768,6 +776,29 @@ function PayrollPreviewModal({
               Sending the payroll email will not change entry status. Use invoicing when you want to close the period.
             </p>
           </div>
+
+          <div className="space-y-2">
+            <label htmlFor="payroll-email-comment" className="block text-sm font-semibold text-sand">
+              Comment for email <span className="font-normal text-sand/55">(optional)</span>
+            </label>
+            <textarea
+              id="payroll-email-comment"
+              value={comment}
+              onChange={(event) => onCommentChange(event.target.value)}
+              maxLength={2000}
+              rows={4}
+              placeholder="Add any context or instructions for the recipient..."
+              className="w-full resize-y rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-sm leading-relaxed text-white outline-none transition placeholder:text-sand/45 focus:border-amber-300"
+            />
+            <p className="text-right text-xs text-sand/45">{comment.length}/2000</p>
+          </div>
+
+          {comment.trim() ? (
+            <div className="rounded-[1.1rem] border border-amber-300/20 bg-amber-300/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-100/75">Comment in email</p>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-amber-50/90">{comment.trim()}</p>
+            </div>
+          ) : null}
 
           <div className="rounded-[1.1rem] border border-white/10 bg-black/20 p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
