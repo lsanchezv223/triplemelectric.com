@@ -86,9 +86,9 @@ export default async function LocationPage({ params }: LocationPageProps) {
         </h1>
         <p className="mt-5 max-w-3xl text-lg leading-relaxed text-sand/80">{area.intro}</p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <a href="/#contact" className="inline-flex items-center gap-2 rounded-full bg-ember px-6 py-3 text-sm font-bold text-white hover:brightness-110">
+          <Link href="/#contact" className="inline-flex items-center gap-2 rounded-full bg-ember px-6 py-3 text-sm font-bold text-white hover:brightness-110">
             Request a Free Quote <ArrowRight size={16} />
-          </a>
+          </Link>
           <a
             href={`tel:${contactInfo.phone.replace(/[^\d+]/g, "")}`}
             className="inline-flex items-center gap-2 rounded-full border border-white/25 px-6 py-3 text-sm font-semibold hover:border-white/55"
@@ -193,9 +193,9 @@ export default async function LocationPage({ params }: LocationPageProps) {
           <p className="mt-3 max-w-2xl text-sand/75">
             Share a few details about your project and location. Triple M Electric will follow up to discuss your request.
           </p>
-          <a href="/#contact" className="mt-6 inline-flex rounded-full bg-ember px-6 py-3 text-sm font-bold text-white hover:brightness-110">
+          <Link href="/#contact" className="mt-6 inline-flex rounded-full bg-ember px-6 py-3 text-sm font-bold text-white hover:brightness-110">
             Get a Free Quote
-          </a>
+          </Link>
         </Reveal>
       </section>
     </div>

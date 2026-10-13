@@ -46,9 +46,9 @@ export default function LocationsPage() {
               <span className="block text-lg font-bold">{contactInfo.phone}</span>
             </span>
           </a>
-          <a href="/#contact" className="rounded-full border border-white/25 px-6 py-3 text-sm font-semibold text-sand transition hover:border-white/55">
+          <Link href="/#contact" className="rounded-full border border-white/25 px-6 py-3 text-sm font-semibold text-sand transition hover:border-white/55">
             Request a Quote
-          </a>
+          </Link>
         </div>
       </Reveal>
 
@@ -93,9 +93,9 @@ export default function LocationsPage() {
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-3">
-              <a href="/#contact" className="rounded-full bg-ember px-5 py-3 text-sm font-bold text-white hover:brightness-110">
+              <Link href="/#contact" className="rounded-full bg-ember px-5 py-3 text-sm font-bold text-white hover:brightness-110">
                 Request a Quote
-              </a>
+              </Link>
             </div>
           </div>
         </Reveal>
