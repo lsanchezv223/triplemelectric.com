@@ -14,6 +14,81 @@ export const contactInfo = {
   license: "Electrical Contractors License 7015049"
 };
 
+export const serviceAreas = [
+  {
+    name: "Toronto",
+    slug: "toronto",
+    region: "Toronto, ON",
+    title: "Electrician in Toronto, ON | Triple M Electric",
+    description: "Looking for an electrician in Toronto? Triple M Electric provides licensed electrical repairs, installations, panel upgrades, lighting, and more across the city.",
+    intro: "Triple M Electric provides residential, commercial, and industrial electrical services throughout Toronto. Our service is city-wide, so whether your property is downtown, midtown, North York, Scarborough, Etobicoke, or another Toronto neighbourhood, contact us about your project.",
+    communities: ["Downtown Toronto", "Midtown", "North York", "Scarborough", "Etobicoke", "Toronto neighbourhoods city-wide"]
+  },
+  {
+    name: "North York",
+    slug: "north-york",
+    region: "Toronto, ON",
+    title: "Electrician in North York, ON | Triple M Electric",
+    description: "Need an electrician in North York? Triple M Electric handles residential, commercial, and industrial electrical repairs, installations, and upgrades.",
+    intro: "North York is part of Triple M Electric’s city-wide Toronto service area. We provide residential, commercial, and industrial electrical work, from troubleshooting and repairs to installations, lighting, and panel upgrades.",
+    communities: ["Willowdale", "Don Mills", "Bayview Village", "Downsview", "York Mills"]
+  },
+  {
+    name: "Vaughan",
+    slug: "vaughan",
+    region: "Vaughan, ON",
+    title: "Electrician in Vaughan, ON | Triple M Electric",
+    description: "Looking for a licensed electrician in Vaughan? Triple M Electric provides residential, commercial, and industrial electrical services.",
+    intro: "Triple M Electric serves residential, commercial, and industrial properties across Vaughan. Contact us for electrical repairs, new installations, lighting, panel upgrades, and other project needs in the city.",
+    communities: ["Concord", "Kleinburg", "Maple", "Thornhill", "Woodbridge"]
+  },
+  {
+    name: "Richmond Hill",
+    slug: "richmond-hill",
+    region: "Richmond Hill, ON",
+    title: "Electrician in Richmond Hill, ON | Triple M Electric",
+    description: "Triple M Electric provides residential, commercial, and industrial electrical services in Richmond Hill, including repairs, installations, lighting, and panel upgrades.",
+    intro: "Triple M Electric provides electrical services for homes, businesses, and industrial properties throughout Richmond Hill. Tell us about your project and location so our team can help plan the right next step.",
+    communities: ["Oak Ridges", "Bayview Hill", "Langstaff", "Mill Pond", "Richvale"]
+  },
+  {
+    name: "Markham",
+    slug: "markham",
+    region: "Markham, ON",
+    title: "Electrician in Markham, ON | Triple M Electric",
+    description: "Need an electrician in Markham? Triple M Electric offers licensed electrical repairs, installations, panel upgrades, lighting, and commercial services.",
+    intro: "Triple M Electric serves residential, commercial, and industrial properties across Markham. Our team can discuss electrical troubleshooting, installations, lighting, panel upgrades, and ongoing maintenance for your property.",
+    communities: ["Unionville", "Markham Village", "Thornhill", "Buttonville", "Cornell"]
+  },
+  {
+    name: "Scarborough",
+    slug: "scarborough",
+    region: "Toronto, ON",
+    title: "Electrician in Scarborough, Toronto | Triple M Electric",
+    description: "Triple M Electric provides residential, commercial, and industrial electrical services throughout Scarborough, Toronto. Contact us for a quote.",
+    intro: "Scarborough is included in Triple M Electric’s city-wide Toronto coverage. We help homeowners, businesses, and industrial properties with electrical repairs, installations, lighting, panel upgrades, and other electrical projects.",
+    communities: ["Agincourt", "Wexford", "Malvern", "Birch Cliff", "Scarborough Town Centre"]
+  },
+  {
+    name: "Etobicoke",
+    slug: "etobicoke",
+    region: "Toronto, ON",
+    title: "Electrician in Etobicoke, Toronto | Triple M Electric",
+    description: "Looking for an electrician in Etobicoke? Triple M Electric provides residential, commercial, and industrial electrical service across the area.",
+    intro: "Etobicoke is part of Triple M Electric’s city-wide Toronto service area. We provide electrical repairs, installations, lighting, panel upgrades, and commercial or industrial support for properties across the area.",
+    communities: ["Mimico", "Islington", "Rexdale", "The Kingsway", "Etobicoke Lakeshore"]
+  },
+  {
+    name: "Mississauga",
+    slug: "mississauga",
+    region: "Mississauga, ON",
+    title: "Electrician in Mississauga, ON | Triple M Electric",
+    description: "Triple M Electric provides residential, commercial, and industrial electrical services in Mississauga, including repairs, installations, lighting, and panel upgrades.",
+    intro: "Triple M Electric serves residential, commercial, and industrial properties across Mississauga. Contact us to discuss electrical repairs, installations, lighting, panel upgrades, or maintenance for your property.",
+    communities: ["Port Credit", "Streetsville", "Meadowvale", "Erin Mills", "Cooksville"]
+  }
+];
+
 export const services: ServiceItem[] = [
   {
     title: "Electrical Installations",

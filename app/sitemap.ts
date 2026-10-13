@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { services } from "@/lib/site-data";
+import { serviceAreas, services } from "@/lib/site-data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://triplemelectric.ca";
@@ -11,6 +11,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1
+    },
+    {
+      url: `${baseUrl}/locations`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8
     }
   ];
 
@@ -21,5 +27,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8
   }));
 
-  return [...staticRoutes, ...serviceRoutes];
+  const locationRoutes: MetadataRoute.Sitemap = serviceAreas.map((area) => ({
+      url: `${baseUrl}/locations/${area.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8
+  }));
+
+  return [...staticRoutes, ...serviceRoutes, ...locationRoutes];
 }

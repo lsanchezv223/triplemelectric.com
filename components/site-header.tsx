@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
-const links = [
-  { href: "#services", label: "Services" },
-  { href: "#portfolio", label: "Portfolio" },
-  { href: "#about", label: "About" },
-  { href: "#contact", label: "Contact" }
+const links: { href: string; label: string; route?: boolean }[] = [
+  { href: "/#services", label: "Services" },
+  { href: "/locations", label: "Areas We Serve", route: true },
+  { href: "/#portfolio", label: "Portfolio" },
+  { href: "/#about", label: "About" },
+  { href: "/#contact", label: "Contact" }
 ];
 
 export function SiteHeader() {
@@ -30,11 +31,17 @@ export function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-sand/80 md:flex">
-          {links.map((link) => (
-            <a key={link.href} href={link.href} className="transition hover:text-sand">
-              {link.label}
-            </a>
-          ))}
+          {links.map((link) =>
+            link.route ? (
+              <Link key={link.href} href={link.href} className="transition hover:text-sand">
+                {link.label}
+              </Link>
+            ) : (
+              <a key={link.href} href={link.href} className="transition hover:text-sand">
+                {link.label}
+              </a>
+            )
+          )}
           <Link href="/login" className="transition hover:text-sand">
             Employees
           </Link>
@@ -54,16 +61,27 @@ export function SiteHeader() {
       {open ? (
         <div className="border-t border-white/10 bg-midnight/95 px-5 py-4 md:hidden">
           <nav className="flex flex-col gap-2">
-            {links.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-sand/85 transition hover:bg-white/10 hover:text-sand"
-              >
-                {link.label}
-              </a>
-            ))}
+            {links.map((link) =>
+              link.route ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-sand/85 transition hover:bg-white/10 hover:text-sand"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-sand/85 transition hover:bg-white/10 hover:text-sand"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
             <Link
               href="/login"
               onClick={() => setOpen(false)}

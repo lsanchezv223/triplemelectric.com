@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { StickyContactCta } from "@/components/sticky-contact-cta";
-import { contactInfo } from "@/lib/site-data";
+import { contactInfo, serviceAreas } from "@/lib/site-data";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const localBusinessJsonLd = {
@@ -21,7 +21,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       postalCode: "M2J 4K3",
       addressCountry: "CA"
     },
-    areaServed: ["Toronto", "Greater Toronto Area"],
+    areaServed: serviceAreas.map((area) => ({ "@type": "Place", name: area.name })),
     openingHours: "Mo-Su 00:00-23:59"
   };
 
