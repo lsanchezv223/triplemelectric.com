@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BadgeCheck, MapPin, PhoneCall } from "lucide-react";
 import { Reveal } from "@/components/reveal";
 import { contactInfo, serviceAreas, services } from "@/lib/site-data";
+import { projects } from "@/lib/project-data";
 
 type LocationPageProps = {
   params: Promise<{ slug: string }>;
@@ -44,6 +46,8 @@ export default async function LocationPage({ params }: LocationPageProps) {
   const area = serviceAreas.find((item) => item.slug === slug);
 
   if (!area) notFound();
+
+  const localProjects = projects.filter((project) => project.areaSlug === area.slug);
 
   const serviceSchema = {
     "@context": "https://schema.org",
@@ -144,6 +148,50 @@ export default async function LocationPage({ params }: LocationPageProps) {
           ))}
         </div>
       </section>
+
+      {localProjects.length > 0 ? (
+        <section className="mt-16" aria-labelledby="projects-heading">
+          <Reveal>
+            <h2 id="projects-heading" className="font-[var(--font-display)] text-2xl font-bold md:text-3xl">
+              Electrical Projects in {area.name}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sand/75">
+              A selection of electrical work completed in {area.name} and its neighbourhoods.
+            </p>
+          </Reveal>
+          <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {localProjects.map((project, projectIndex) => (
+              <Reveal key={`${project.title}-${project.location}-${projectIndex}`} delay={(projectIndex % 3) * 0.05}>
+                <article className="h-full overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
+                  <div className="relative h-[210px]">
+                    <Image
+                      src={project.photos[0].src}
+                      alt={project.photos[0].alt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-300">{project.location}</p>
+                    <h3 className="mt-2 text-lg font-bold">{project.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-sand/70">{project.description}</p>
+                    {project.photos.length > 1 ? (
+                      <div className="mt-4 grid grid-cols-3 gap-2" aria-label={`More photos of ${project.title}`}>
+                        {project.photos.slice(1).map((photo) => (
+                          <div key={photo.src} className="relative h-20 overflow-hidden rounded-lg">
+                            <Image src={photo.src} alt={photo.alt} fill sizes="120px" className="object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-16" aria-labelledby="services-heading">
         <Reveal>
